@@ -13,7 +13,7 @@ export default function Empleados() {
   const [editando, setEditando] = useState(null)
   const [search, setSearch] = useState('')
   const [filtroSeccion, setFiltroSeccion] = useState('todas')
-  const [filtroEstado, setFiltroEstado] = useState('todos')
+  const [filtroEstado, setFiltroEstado] = useState('activos')
   const [vista, setVista] = useState('grid')
   const [statsMap, setStatsMap] = useState({})
 
