@@ -34,8 +34,16 @@ export function useEmpleados() {
   }
 
   async function eliminarEmpleado(id) {
-    const { error } = await supabase.from('empleados').update({ activo: false }).eq('id', id)
-    if (error) throw error
+    const { error: errEmp } = await supabase.from('empleados').update({ activo: false }).eq('id', id)
+    if (errEmp) throw errEmp
+
+    const { error: errPrestamos } = await supabase
+      .from('prestamos')
+      .update({ estado: 'cancelado' })
+      .eq('empleado_id', id)
+      .eq('estado', 'activo')
+    if (errPrestamos) throw errPrestamos
+
     await fetchEmpleados()
   }
 
