@@ -1,0 +1,376 @@
+# CLAUDE.md — Sistema de Gestión de Préstamos Agrícolas
+
+## Visión General del Proyecto
+
+Aplicación web privada para gestionar préstamos internos a empleados de una empresa agrícola familiar de ciclo completo (cerdos, pollos, cadena alimenticia). El sistema reemplaza una hoja de Excel manual con una solución automatizada, visual e inteligente. El desarrollo es **iterativo**: las secciones y reglas de negocio se irán definiendo con el cliente a medida que avanza el proyecto.
+
+---
+
+## Stack Tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | React + Vite |
+| Estilos | Tailwind CSS |
+| Componentes UI | shadcn/ui |
+| Íconos | Lucide React |
+| Gráficas | Recharts |
+| Fechas | Day.js |
+| Formularios | React Hook Form + Zod |
+| Notificaciones | Sonner (Toast) |
+| PDFs | jsPDF + jspdf-autotable |
+| Excel export | SheetJS (xlsx) |
+| Base de datos | Supabase (PostgreSQL) |
+| Autenticación | Supabase Auth |
+| Tiempo real | Supabase Realtime |
+| Despliegue | Vercel o Netlify |
+
+---
+
+## Contexto del Negocio
+
+- **Empresa:** Agrícola familiar (padre e hijo), sector agricultura y cadena alimenticia completa
+- **Operaciones:** Cría de cerdos, cría de pollos, fábrica de alimentos, y otras secciones
+- **Préstamos:** Capital variable otorgado a empleados
+  - Tasa de interés: entre **3% y 8% mensual** (lineal/simple)
+  - Plazo: **12 meses fijos**
+  - Tipo de interés: **lineal (simple)** — la tasa se aplica siempre sobre el capital original
+  - Pagos: **voluntarios los días 15 y 30 de cada mes**
+  - Un empleado puede tener **múltiples préstamos activos** simultáneamente
+- **Usuarios del sistema:** 1 único usuario administrador
+- **Secciones:** Dinámicas, se crean y editan desde la app (ej: Montones, Cerezas, Fábrica de Alimentos, Cerdos, Pollos — pueden cambiar)
+
+---
+
+## Fórmula de Cálculo Lineal
+
+```
+Interés mensual = Monto original × Tasa mensual
+Abono a capital = Monto original ÷ 12
+Cuota mensual fija = Interés mensual + Abono a capital
+
+Pago quincenal = Cuota mensual fija ÷ 2
+```
+
+Cada préstamo genera **24 cuotas quincenales** (12 meses × 2 pagos), todas del mismo monto. El interés no se recalcula sobre saldo, siempre sobre el monto original.
+
+---
+
+## Estructura de Base de Datos (Supabase / PostgreSQL)
+
+```sql
+-- Secciones de trabajo (dinámicas)
+secciones (
+  id uuid PRIMARY KEY,
+  nombre text NOT NULL,
+  descripcion text,
+  activa boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+)
+
+-- Empleados
+empleados (
+  id uuid PRIMARY KEY,
+  nombre text NOT NULL,
+  apellido text NOT NULL,
+  seccion_id uuid REFERENCES secciones(id),
+  telefono text,
+  activo boolean DEFAULT true,
+  notas text,
+  created_at timestamptz DEFAULT now()
+)
+
+-- Préstamos
+prestamos (
+  id uuid PRIMARY KEY,
+  empleado_id uuid REFERENCES empleados(id),
+  monto_original numeric NOT NULL,
+  tasa_mensual numeric NOT NULL,         -- ej: 0.05 para 5%
+  fecha_inicio date NOT NULL,
+  fecha_fin date NOT NULL,               -- siempre fecha_inicio + 12 meses
+  cuota_mensual numeric NOT NULL,        -- calculada automáticamente
+  cuota_quincenal numeric NOT NULL,      -- cuota_mensual / 2
+  estado text DEFAULT 'activo',          -- activo | completado | cancelado
+  notas text,
+  created_at timestamptz DEFAULT now()
+)
+
+-- Cuotas (generadas automáticamente al crear préstamo)
+cuotas (
+  id uuid PRIMARY KEY,
+  prestamo_id uuid REFERENCES prestamos(id),
+  numero_cuota integer NOT NULL,         -- 1 al 24
+  fecha_vencimiento date NOT NULL,       -- día 15 o 30
+  monto_esperado numeric NOT NULL,
+  monto_pagado numeric DEFAULT 0,
+  estado text DEFAULT 'pendiente',       -- pendiente | pagada | parcial | vencida
+  fecha_pago timestamptz,
+  created_at timestamptz DEFAULT now()
+)
+
+-- Pagos (historial detallado)
+pagos (
+  id uuid PRIMARY KEY,
+  cuota_id uuid REFERENCES cuotas(id),
+  prestamo_id uuid REFERENCES prestamos(id),
+  empleado_id uuid REFERENCES empleados(id),
+  monto numeric NOT NULL,
+  fecha_pago timestamptz DEFAULT now(),
+  notas text,
+  created_at timestamptz DEFAULT now()
+)
+```
+
+---
+
+## Arquitectura de la Aplicación
+
+```
+src/
+├── components/
+│   ├── ui/                    # shadcn/ui components
+│   ├── layout/
+│   │   ├── Sidebar.jsx
+│   │   ├── Header.jsx
+│   │   └── Layout.jsx
+│   ├── dashboard/
+│   │   ├── KPICards.jsx
+│   │   ├── GraficaBarras.jsx
+│   │   ├── GraficaPie.jsx
+│   │   ├── GraficaLinea.jsx
+│   │   ├── GraficaBarrasApiladas.jsx
+│   │   └── AlertasPanel.jsx
+│   ├── empleados/
+│   │   ├── EmpleadosList.jsx
+│   │   ├── EmpleadoForm.jsx
+│   │   ├── EmpleadoFicha.jsx
+│   │   └── ScoreConfiabilidad.jsx
+│   ├── prestamos/
+│   │   ├── PrestamosList.jsx
+│   │   ├── PrestamoForm.jsx
+│   │   ├── TablaAmortizacion.jsx
+│   │   └── CalculadoraPrevia.jsx
+│   ├── pagos/
+│   │   ├── PanelQuincena.jsx
+│   │   ├── RegistroPago.jsx
+│   │   └── PagosParciales.jsx
+│   ├── secciones/
+│   │   ├── SeccionesList.jsx
+│   │   └── SeccionForm.jsx
+│   └── reportes/
+│       └── ExportarPDF.jsx
+├── pages/
+│   ├── Login.jsx
+│   ├── Dashboard.jsx
+│   ├── Empleados.jsx
+│   ├── EmpleadoDetalle.jsx
+│   ├── Prestamos.jsx
+│   ├── PrestamoDetalle.jsx
+│   ├── Quincena.jsx
+│   ├── Secciones.jsx
+│   └── Reportes.jsx
+├── lib/
+│   ├── supabase.js            # cliente supabase
+│   ├── calculos.js            # lógica de amortización lineal
+│   ├── pdf.js                 # generación de PDFs con jsPDF
+│   └── utils.js               # helpers de fechas, formatos, etc.
+├── hooks/
+│   ├── useAuth.js
+│   ├── useEmpleados.js
+│   ├── usePrestamos.js
+│   └── usePagos.js
+└── context/
+    └── AuthContext.jsx
+```
+
+---
+
+## Módulos y Funcionalidades
+
+### 1. Autenticación
+- Login con email y contraseña via Supabase Auth
+- Sesión persistente, redirección automática si ya está autenticado
+- Logout desde el header
+- 1 único usuario administrador
+
+### 2. Dashboard
+**KPI Cards:**
+- Capital total prestado (activo)
+- Total cobrado (todos los tiempos)
+- Intereses generados acumulados
+- Cuotas pendientes esta quincena
+- Préstamos activos totales
+- Empleados con préstamos activos
+
+**Gráficas (Recharts):**
+- Barras por sección: capital prestado vs recuperado
+- Línea de tiempo: flujo de pagos mes a mes
+- Pie chart: distribución de préstamos por sección
+- Barras apiladas: estado de préstamos (al día / pendiente / atrasado)
+
+**Panel de alertas:**
+- 🔴 Cuotas vencidas sin pagar
+- 🟡 Cuotas que vencen en 3 días o menos
+- 🟢 Préstamos en último mes (cuota 23 o 24)
+- 🔵 Empleados sin préstamo activo
+
+### 3. Gestión de Secciones
+- CRUD completo de secciones
+- Activar/desactivar secciones
+- Ver empleados y métricas por sección
+
+### 4. Gestión de Empleados
+- CRUD completo con asignación de sección
+- Ficha individual con:
+  - Todos sus préstamos (activos e históricos)
+  - Historial de pagos
+  - Score de confiabilidad automático
+  - Notas libres
+- Score de confiabilidad:
+  - ⭐⭐⭐ Siempre puntual → tasa sugerida 3-4%
+  - ⭐⭐ Algún retraso → tasa sugerida 5-6%
+  - ⭐ Varios retrasos → tasa sugerida 7-8%
+
+### 5. Calculadora de Préstamo (pre-registro)
+- Inputs: monto, tasa, fecha de inicio
+- Output instantáneo:
+  - Cuota quincenal
+  - Total a pagar al finalizar
+  - Total de intereses a generar
+  - Tabla de amortización completa (24 filas)
+- Botón "Registrar este préstamo" para confirmar y guardar
+
+### 6. Gestión de Préstamos
+- Crear préstamo → genera automáticamente las 24 cuotas en base de datos
+- Ver tabla de amortización completa por préstamo
+- Estados: activo | completado | cancelado
+- Notas por préstamo
+- Filtros: por sección, por estado, por rango de fechas, por tasa
+
+### 7. Panel del 15 y del 30 (Quincena)
+- Vista dedicada al día de cobro
+- Lista de todos los que deben pagar esa quincena
+- Monto exacto por cada empleado
+- Un clic para marcar pago completo
+- Opción de pago parcial con campo de monto
+- Resumen del total cobrado vs esperado en esa quincena
+
+### 8. Registro de Pagos
+- Marcar cuota como pagada (completa o parcial)
+- Si es parcial: registra el monto, arrastra el restante a la siguiente cuota
+- Historial completo de pagos con fecha y hora
+- Notas por pago (ej: "avisó que pagaba el 16")
+
+### 9. Reportes y PDFs
+**Todos los PDFs se pueden generar en cualquier momento, sin esperar al 15 o 30.**
+
+PDFs disponibles desde:
+- **Ficha de empleado:** tabla de amortización, historial de pagos, estado actual
+- **Dashboard:** resumen general del negocio con fecha/hora del corte
+- **Vista de préstamos:** listado de préstamos activos, vencidos, completados
+- **Panel de quincena:** quién pagó y quién no en la quincena actual
+- **Vista de sección:** rentabilidad y morosidad por área
+
+Todos los PDFs incluyen:
+- Nombre del negocio / encabezado
+- Fecha y hora exacta de generación
+- Datos limpios en tabla con jspdf-autotable
+
+**Exportación a Excel:**
+- Reporte general de préstamos
+- Historial de pagos por período
+
+### 10. Búsqueda y Filtros
+- Barra de búsqueda global en tiempo real
+- Filtros combinables: sección, estado, rango de fechas, tasa
+- Resultados inmediatos sin recargar página
+
+### 11. Rentabilidad por Sección
+- Tabla comparativa entre secciones
+- Capital prestado, cobrado, pendiente
+- Intereses generados por sección
+- Tasa de morosidad por sección
+- Número de empleados con préstamos activos
+
+---
+
+## Reglas de Negocio Importantes
+
+1. El interés es siempre **lineal (simple)**, calculado sobre el monto original, nunca sobre el saldo.
+2. Los pagos son **voluntarios** los días 15 y 30. No hay descuento de nómina.
+3. Un empleado puede tener **N préstamos activos** simultáneamente.
+4. El plazo es siempre **12 meses = 24 cuotas quincenales**.
+5. La tasa va de **3% a 8% mensual**. El sistema sugiere pero el usuario decide.
+6. Un pago parcial **no cancela la cuota**, queda en estado "parcial" y el faltante se arrastra.
+7. Las secciones son **dinámicas**: se crean, editan y desactivan desde la app.
+8. Solo hay **1 usuario administrador**. No hay roles múltiples.
+9. Todos los PDFs llevan **fecha y hora de generación** para identificar el corte.
+
+---
+
+## Orden de Desarrollo Recomendado
+
+### Fase 1 — Base del proyecto
+- [ ] Setup Vite + React + Tailwind + shadcn/ui
+- [ ] Configuración de Supabase (proyecto, tablas, RLS policies)
+- [ ] Sistema de autenticación (Login, sesión, logout)
+- [ ] Layout base con sidebar y navegación responsive
+
+### Fase 2 — Núcleo de datos
+- [ ] CRUD de secciones
+- [ ] CRUD de empleados con asignación de sección
+- [ ] Lógica de cálculo lineal en `calculos.js`
+- [ ] Calculadora de préstamo (sin guardar)
+
+### Fase 3 — Préstamos
+- [ ] Formulario de creación de préstamo
+- [ ] Generación automática de 24 cuotas al crear préstamo
+- [ ] Vista de tabla de amortización
+- [ ] Listado de préstamos con filtros
+
+### Fase 4 — Pagos
+- [ ] Panel del 15 y del 30
+- [ ] Registro de pago completo
+- [ ] Registro de pago parcial
+- [ ] Historial de pagos
+
+### Fase 5 — Dashboard e inteligencia
+- [ ] KPI cards con datos reales
+- [ ] Todas las gráficas con Recharts
+- [ ] Sistema de alertas inteligentes
+- [ ] Score de confiabilidad por empleado
+
+### Fase 6 — Reportes y PDFs
+- [ ] Generación de PDFs con jsPDF + autotable
+- [ ] Exportación a Excel con SheetJS
+- [ ] Vista de rentabilidad por sección
+
+### Fase 7 — Pulido final
+- [ ] Responsive móvil completo
+- [ ] Búsqueda global
+- [ ] Notas en empleados y préstamos
+- [ ] Testing y corrección de bugs
+- [ ] Despliegue en Vercel/Netlify
+
+---
+
+## Variables de Entorno Necesarias
+
+```env
+VITE_SUPABASE_URL=tu_supabase_url
+VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
+```
+
+---
+
+## Notas para Claude Code
+
+- El desarrollo es **iterativo**. Las secciones y detalles del negocio se irán confirmando con el cliente.
+- Priorizar **mobile-first** en todos los componentes: el cliente usará la app desde el celular frecuentemente.
+- Todos los montos se manejan en la **moneda local dominicana (DOP)**. Usar formato `RD$ X,XXX.00`.
+- Los formularios deben tener **validación completa** con React Hook Form + Zod antes de tocar Supabase.
+- Usar **Sonner** para feedback de todas las acciones (éxito, error, cargando).
+- Las gráficas del dashboard deben ser **responsivas** y funcionar bien en pantalla pequeña.
+- Cada vez que se cree un préstamo, las 24 cuotas se insertan en Supabase en una sola operación batch.
+- El PDF se genera en el **cliente (browser)** con jsPDF, sin llamadas al servidor.
+- Las fechas de cuotas siempre caen en **día 15 o día 30** del mes correspondiente.
