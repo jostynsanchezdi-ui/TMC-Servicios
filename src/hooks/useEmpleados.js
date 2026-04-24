@@ -17,14 +17,18 @@ export function useEmpleados() {
     setLoading(false)
   }
 
+  function sanitizar(values) {
+    return { ...values, seccion_id: values.seccion_id || null }
+  }
+
   async function crearEmpleado(values) {
-    const { error } = await supabase.from('empleados').insert(values)
+    const { error } = await supabase.from('empleados').insert(sanitizar(values))
     if (error) throw error
     await fetchEmpleados()
   }
 
   async function actualizarEmpleado(id, values) {
-    const { error } = await supabase.from('empleados').update(values).eq('id', id)
+    const { error } = await supabase.from('empleados').update(sanitizar(values)).eq('id', id)
     if (error) throw error
     await fetchEmpleados()
   }
