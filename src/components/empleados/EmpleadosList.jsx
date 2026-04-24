@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Pencil, Trash2, ChevronRight, Star, Phone, Building2, CreditCard, AlertCircle, TrendingUp } from 'lucide-react'
+import { Pencil, Trash2, UserMinus, ChevronRight, Star, Phone, Building2, CreditCard, AlertCircle, TrendingUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDOP } from '@/lib/utils'
 import { tasaSugeridaPorScore } from '@/lib/calculos'
@@ -52,7 +52,7 @@ function Stars({ score }) {
   )
 }
 
-function EmpleadoCard({ emp, stats, onEdit, onDelete }) {
+function EmpleadoCard({ emp, stats, onEdit, onDesactivar, onDelete }) {
   const nombre = `${emp.nombre} ${emp.apellido}`
   const initials = `${emp.nombre?.[0] || ''}${emp.apellido?.[0] || ''}`.toUpperCase()
   const av = avatarColor(nombre)
@@ -83,16 +83,26 @@ function EmpleadoCard({ emp, stats, onEdit, onDelete }) {
 
         {/* Actions */}
         <div className="flex gap-1 flex-shrink-0">
-          <button onClick={() => onEdit(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+          <button onClick={() => onEdit(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title="Editar">
             <Pencil size={14} />
           </button>
           <button
             onClick={async () => {
-              if (!confirm(`¿Desactivar a ${nombre}?`)) return
-              try { await onDelete(emp.id); toast.success('Empleado desactivado') }
+              if (!confirm(`¿Desactivar a ${nombre}? Sus préstamos activos serán cancelados.`)) return
+              try { await onDesactivar(emp.id); toast.success('Empleado desactivado') }
               catch { toast.error('Error al desactivar') }
             }}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors" title="Desactivar"
+          >
+            <UserMinus size={14} />
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm(`¿Eliminar permanentemente a ${nombre}? Esto borrará todos sus préstamos, cuotas y pagos. Esta acción no se puede deshacer.`)) return
+              try { await onDelete(emp.id); toast.success('Empleado eliminado') }
+              catch { toast.error('Error al eliminar') }
+            }}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar permanentemente"
           >
             <Trash2 size={14} />
           </button>
@@ -150,7 +160,7 @@ function EmpleadoCard({ emp, stats, onEdit, onDelete }) {
   )
 }
 
-function EmpleadoRow({ emp, stats, onEdit, onDelete }) {
+function EmpleadoRow({ emp, stats, onEdit, onDesactivar, onDelete }) {
   const nombre = `${emp.nombre} ${emp.apellido}`
   const initials = `${emp.nombre?.[0] || ''}${emp.apellido?.[0] || ''}`.toUpperCase()
   const av = avatarColor(nombre)
@@ -196,16 +206,26 @@ function EmpleadoRow({ emp, stats, onEdit, onDelete }) {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <button onClick={() => onEdit(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700">
+        <button onClick={() => onEdit(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700" title="Editar">
           <Pencil size={14} />
         </button>
         <button
           onClick={async () => {
-            if (!confirm(`¿Desactivar a ${nombre}?`)) return
-            try { await onDelete(emp.id); toast.success('Empleado desactivado') }
+            if (!confirm(`¿Desactivar a ${nombre}? Sus préstamos activos serán cancelados.`)) return
+            try { await onDesactivar(emp.id); toast.success('Empleado desactivado') }
             catch { toast.error('Error al desactivar') }
           }}
-          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"
+          className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500" title="Desactivar"
+        >
+          <UserMinus size={14} />
+        </button>
+        <button
+          onClick={async () => {
+            if (!confirm(`¿Eliminar permanentemente a ${nombre}? Esto borrará todos sus préstamos, cuotas y pagos. Esta acción no se puede deshacer.`)) return
+            try { await onDelete(emp.id); toast.success('Empleado eliminado') }
+            catch { toast.error('Error al eliminar') }
+          }}
+          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500" title="Eliminar permanentemente"
         >
           <Trash2 size={14} />
         </button>
@@ -217,7 +237,7 @@ function EmpleadoRow({ emp, stats, onEdit, onDelete }) {
   )
 }
 
-export default function EmpleadosList({ empleados, loading, statsMap, vista, onEdit, onDelete }) {
+export default function EmpleadosList({ empleados, loading, statsMap, vista, onEdit, onDesactivar, onDelete }) {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="flex flex-col items-center gap-3">
@@ -246,6 +266,7 @@ export default function EmpleadosList({ empleados, loading, statsMap, vista, onE
             emp={emp}
             stats={statsMap[emp.id]}
             onEdit={onEdit}
+            onDesactivar={onDesactivar}
             onDelete={onDelete}
           />
         ))}
@@ -261,6 +282,7 @@ export default function EmpleadosList({ empleados, loading, statsMap, vista, onE
           emp={emp}
           stats={statsMap[emp.id]}
           onEdit={onEdit}
+          onDesactivar={onDesactivar}
           onDelete={onDelete}
         />
       ))}

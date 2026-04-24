@@ -8,7 +8,7 @@ import { formatDOP } from '@/lib/utils'
 import { Plus, Search, LayoutGrid, List, Users, TrendingUp, CreditCard, AlertCircle } from 'lucide-react'
 
 export default function Empleados() {
-  const { empleados, loading, crearEmpleado, actualizarEmpleado, eliminarEmpleado } = useEmpleados()
+  const { empleados, loading, crearEmpleado, actualizarEmpleado, desactivarEmpleado, eliminarEmpleado } = useEmpleados()
   const [formOpen, setFormOpen] = useState(false)
   const [editando, setEditando] = useState(null)
   const [search, setSearch] = useState('')
@@ -180,6 +180,7 @@ export default function Empleados() {
         statsMap={statsMap}
         vista={vista}
         onEdit={handleEdit}
+        onDesactivar={desactivarEmpleado}
         onDelete={eliminarEmpleado}
       />
 
