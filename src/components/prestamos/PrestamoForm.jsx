@@ -51,7 +51,19 @@ export default function PrestamoForm({ onClose, onCreate }) {
   }, [])
 
   useEffect(() => {
-    if (monto > 0 && tasa > 0) {
+    if (modoEntrada === 'cuota' && cuotaInput && parseFloat(cuotaInput) > 0 && monto > 0) {
+      const cuota = parseFloat(cuotaInput)
+      const nuevaTasa = parseFloat(tasaDesdeCuota(cuota, Number(monto), meses).toFixed(2))
+      const interesMensual = Number(monto) * (nuevaTasa / 100)
+      setPreview({
+        cuotaQuincenal: cuota,
+        totalIntereses: interesMensual * meses,
+        totalPagar: cuota * meses * 2,
+      })
+      if (Math.abs(nuevaTasa - Number(tasa)) > 0.001) {
+        setValue('tasaMensual', nuevaTasa, { shouldValidate: true })
+      }
+    } else if (monto > 0 && tasa > 0) {
       const p = calcularPrestamo(Number(monto), Number(tasa) / 100, fechaInicio || dayjs().format('YYYY-MM-DD'), meses)
       setPreview(p)
       if (modoEntrada === 'tasa') setCuotaInput(p.cuotaQuincenal.toFixed(2))
