@@ -40,6 +40,7 @@ export default function QuincenaSelector({ month, half, onChange, showFullMonth 
     <div className="space-y-1 mt-1">
       <div className="flex items-center justify-between gap-1">
         <button
+          type="button"
           onClick={() => onChange(month.subtract(1, 'month'), half)}
           className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
         >
@@ -49,6 +50,7 @@ export default function QuincenaSelector({ month, half, onChange, showFullMonth 
           {month.format('MMM YYYY')}
         </span>
         <button
+          type="button"
           onClick={() => onChange(month.add(1, 'month'), half)}
           className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
         >
@@ -57,6 +59,7 @@ export default function QuincenaSelector({ month, half, onChange, showFullMonth 
       </div>
       <div className="flex gap-1">
         <button
+          type="button"
           onClick={() => onChange(month, 1)}
           className={`flex-1 text-[10px] py-1 rounded-lg font-medium transition-colors ${
             half === 1 ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -65,6 +68,7 @@ export default function QuincenaSelector({ month, half, onChange, showFullMonth 
           1 – 15
         </button>
         <button
+          type="button"
           onClick={() => onChange(month, 2)}
           className={`flex-1 text-[10px] py-1 rounded-lg font-medium transition-colors ${
             half === 2 ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -74,6 +78,7 @@ export default function QuincenaSelector({ month, half, onChange, showFullMonth 
         </button>
         {showFullMonth && (
           <button
+            type="button"
             onClick={() => onChange(month, 0)}
             className={`flex-1 text-[10px] py-1 rounded-lg font-medium transition-colors ${
               half === 0 ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
