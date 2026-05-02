@@ -8,7 +8,7 @@ import { X, Loader2, Star } from 'lucide-react'
 
 const schema = z.object({
   nombre: z.string().min(1, 'Requerido'),
-  apellido: z.string().min(1, 'Requerido'),
+  apellido: z.string().optional(),
   seccion_id: z.string().uuid('Selecciona una sección').optional().or(z.literal('')),
   telefono: z.string().optional(),
   notas: z.string().optional(),
@@ -50,7 +50,7 @@ export default function EmpleadoForm({ empleado, onClose, onCreate, onUpdate }) 
   const [calificacion, setCalificacion] = useState(empleado?.calificacion || null)
   const isEdit = !!empleado
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: empleado || {},
   })
