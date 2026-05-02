@@ -2,8 +2,7 @@ import dayjs from 'dayjs'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function quincenaDates(month, half) {
-  const isFebruary = month.month() === 1
-  const endDay = isFebruary ? month.endOf('month').date() : 30
+  const endDay = month.endOf('month').date()
   if (half === 0) {
     return {
       desde: month.date(1).format('YYYY-MM-DD'),
@@ -23,8 +22,7 @@ export function quincenaDates(month, half) {
 }
 
 export function quincenaLabel(month, half) {
-  const isFebruary = month.month() === 1
-  const endDay = isFebruary ? month.endOf('month').date() : 30
+  const endDay = month.endOf('month').date()
   if (half === 0) return month.format('MMM YYYY')
   const halfStr = half === 1 ? '1–15' : `16–${endDay}`
   return `${halfStr} ${month.format('MMM YYYY')}`
@@ -36,8 +34,7 @@ export function defaultQuincena() {
 }
 
 export default function QuincenaSelector({ month, half, onChange, showFullMonth = false }) {
-  const isFebruary = month.month() === 1
-  const endDay = isFebruary ? month.endOf('month').date() : 30
+  const endDay = month.endOf('month').date()
 
   return (
     <div className="space-y-1 mt-1">
