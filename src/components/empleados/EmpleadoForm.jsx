@@ -70,8 +70,9 @@ export default function EmpleadoForm({ empleado, onClose, onCreate, onUpdate }) 
         toast.success('Empleado creado')
       }
       onClose()
-    } catch {
-      toast.error('Error al guardar')
+    } catch (err) {
+      console.error('Error al guardar empleado:', err)
+      toast.error(`Error: ${err?.message || err?.code || JSON.stringify(err)}`)
     } finally {
       setLoading(false)
     }
