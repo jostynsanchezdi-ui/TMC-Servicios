@@ -14,7 +14,7 @@ import QuincenaSelector, { quincenaDates, defaultQuincena } from '@/components/c
 const schema = z.object({
   empleadoId: z.string().uuid('Selecciona un empleado'),
   montoOriginal: z.coerce.number().min(1, 'Requerido'),
-  tasaMensual: z.coerce.number().min(3, 'Mínimo 3%').max(8, 'Máximo 8%'),
+  tasaMensual: z.coerce.number().min(0.01, 'Requerido'),
   fechaInicio: z.string().min(1, 'Requerido'),
   notas: z.string().optional(),
 })
@@ -171,7 +171,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
                     placeholder="5"
                   />
                   {errors.tasaMensual && <p className="text-red-500 text-xs mt-1">{errors.tasaMensual.message}</p>}
-                  <p className="text-xs text-gray-400 mt-1">% mensual (3%–8%)</p>
+                  <p className="text-xs text-gray-400 mt-1">% mensual</p>
                 </div>
                 {preview && (
                   <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center">
@@ -196,11 +196,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
                 <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center">
                   <p className="text-xs text-gray-400">Tasa mensual</p>
                   {tasaCalculadaDesdeCuota !== null ? (
-                    <p className={`text-sm font-bold mt-0.5 ${
-                      tasaCalculadaDesdeCuota >= 3 && tasaCalculadaDesdeCuota <= 8
-                        ? 'text-green-700'
-                        : 'text-red-600'
-                    }`}>
+                    <p className="text-sm font-bold mt-0.5 text-green-700">
                       {tasaCalculadaDesdeCuota.toFixed(2)}%
                     </p>
                   ) : (

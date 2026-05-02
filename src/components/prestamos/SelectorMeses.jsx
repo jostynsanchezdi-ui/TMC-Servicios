@@ -1,6 +1,6 @@
 export default function SelectorMeses({ value, onChange }) {
   function adjust(delta) {
-    const next = Math.max(1, (value || 1) + delta)
+    const next = Math.min(48, Math.max(1, (value || 1) + delta))
     onChange(next)
   }
 
@@ -21,7 +21,7 @@ export default function SelectorMeses({ value, onChange }) {
       <input
         type="number"
         min={1}
-        max={36}
+        max={48}
         value={value}
         onChange={handleChange}
         className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
