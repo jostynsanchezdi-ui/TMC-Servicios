@@ -135,6 +135,13 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
   const tasaPromedio = activosList.length
     ? activosList.reduce((s, p) => s + Number(p.tasa_mensual), 0) / activosList.length
     : 0
+  const totalCapitalActivos = activosList.reduce((s, p) => s + Number(p.monto_original), 0)
+  const tasaPonderada = totalCapitalActivos > 0
+    ? activosList.reduce((s, p) => s + Number(p.tasa_mensual) * Number(p.monto_original), 0) / totalCapitalActivos
+    : 0
+  const cobroPromedioQnl = activosList.length
+    ? activosList.reduce((s, p) => s + Number(p.cuota_quincenal), 0) / activosList.length
+    : 0
 
   if (loading) return (
     <div className="flex items-center justify-center py-24">
@@ -207,11 +214,13 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* ── Stats strip ── */}
         {showStats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-100 border-b border-gray-100">
+          <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-gray-100 border-b border-gray-100">
             <StatCard label="Total préstamos"  value={prestamos.length}           icon={CreditCard}   bg="bg-violet-50" color="text-violet-600" sub={`${activosList.length} activos`} />
             <StatCard label="Capital activo"   value={formatDOP(capitalActivo)}   icon={TrendingUp}   bg="bg-green-50"  color="text-green-600" />
             <StatCard label="Cuotas pendientes" value={cuotasPendientes}          icon={Clock}        bg="bg-amber-50"  color="text-amber-600" />
             <StatCard label="Tasa promedio"    value={`${(tasaPromedio*100).toFixed(1)}%`} icon={Percent} bg="bg-blue-50" color="text-blue-600" sub="mensual" />
+            <StatCard label="Tasa ponderada"   value={`${(tasaPonderada*100).toFixed(1)}%`} icon={Percent} bg="bg-indigo-50" color="text-indigo-600" sub="por capital" />
+            <StatCard label="Cobro prom. qnl." value={formatDOP(cobroPromedioQnl)} icon={TrendingUp}  bg="bg-teal-50"   color="text-teal-600"  sub="por préstamo" />
           </div>
         )}
 
