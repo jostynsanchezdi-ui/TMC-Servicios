@@ -24,12 +24,12 @@ export function usePrestamos(empleadoId = null) {
   }
 
   async function crearPrestamo(values) {
-    const { montoOriginal, tasaMensual, fechaInicio, empleadoId, notas, meses = 12, cuotasPagadas = 0 } = values
+    const { montoOriginal, tasaMensual, fechaInicio, empleadoId, notas, meses = 12, cuotasPagadas = 0, cuotaQuincenalOverride } = values
     const tasa = tasaMensual / 100
     const interesMensual = montoOriginal * tasa
     const abonoCapital = montoOriginal / meses
     const cuotaMensual = interesMensual + abonoCapital
-    const cuotaQuincenal = cuotaMensual / 2
+    const cuotaQuincenal = cuotaQuincenalOverride ?? cuotaMensual / 2
     const fechaFin = dayjs(fechaInicio).add(meses, 'month').format('YYYY-MM-DD')
 
     const { data: prestamo, error: errPrestamo } = await supabase

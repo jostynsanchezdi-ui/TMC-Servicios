@@ -70,7 +70,8 @@ export default function PrestamoForm({ onClose, onCreate }) {
   }
 
   function onSubmit(data) {
-    setConfirmData({ ...data, meses, cuotasPagadas })
+    const cuotaOverride = modoEntrada === 'cuota' && cuotaInput ? parseFloat(cuotaInput) : undefined
+    setConfirmData({ ...data, meses, cuotasPagadas, cuotaQuincenalOverride: cuotaOverride })
   }
 
   async function confirmarCreacion() {
@@ -335,7 +336,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Cuota quincenal</span>
-                  <span className="font-bold text-green-700">{formatDOP(preview.cuotaQuincenal)}</span>
+                  <span className="font-bold text-green-700">{formatDOP(confirmData.cuotaQuincenalOverride ?? preview.cuotaQuincenal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total intereses</span>
