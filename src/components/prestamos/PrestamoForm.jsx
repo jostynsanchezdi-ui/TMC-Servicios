@@ -51,7 +51,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
   }, [])
 
   useEffect(() => {
-    if (monto > 0 && tasa >= 3 && tasa <= 8) {
+    if (monto > 0 && tasa > 0) {
       const p = calcularPrestamo(Number(monto), Number(tasa) / 100, fechaInicio || dayjs().format('YYYY-MM-DD'), meses)
       setPreview(p)
       if (modoEntrada === 'tasa') setCuotaInput(p.cuotaQuincenal.toFixed(2))
