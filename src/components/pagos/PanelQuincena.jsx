@@ -6,15 +6,8 @@ import { pdfQuincena } from '@/lib/pdf'
 import { toast } from 'sonner'
 import {
   FileText, RefreshCw, CheckSquare, Square, X, Loader2,
-  CheckCircle2, Clock, Zap,
 } from 'lucide-react'
 import QuincenaSelector, { quincenaDates, defaultQuincena, quincenaLabel } from '@/components/common/QuincenaSelector'
-
-const PUNTUALIDAD = [
-  { value: 'prematuro', label: 'Prematuro', icon: Zap, colors: 'border-blue-300 bg-blue-50 text-blue-700', active: 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' },
-  { value: 'a_tiempo', label: 'A tiempo', icon: CheckCircle2, colors: 'border-green-300 bg-green-50 text-green-700', active: 'border-green-500 bg-green-100 ring-2 ring-green-300' },
-  { value: 'tardio', label: 'Tardío', icon: Clock, colors: 'border-amber-300 bg-amber-50 text-amber-700', active: 'border-amber-500 bg-amber-100 ring-2 ring-amber-300' },
-]
 
 const estadoClases = {
   pendiente: 'bg-gray-100 text-gray-600',
@@ -24,7 +17,6 @@ const estadoClases = {
 }
 
 function BulkPagoModal({ cuotas, onClose, onSuccess }) {
-  const [puntualidad, setPuntualidad] = useState('a_tiempo')
   const [loading, setLoading] = useState(false)
 
   const total = cuotas.reduce((s, c) => s + (Number(c.monto_esperado) - Number(c.monto_pagado || 0)), 0)
@@ -49,7 +41,6 @@ function BulkPagoModal({ cuotas, onClose, onSuccess }) {
           empleado_id: c.prestamos?.empleado_id,
           monto: pendiente,
           fecha_pago: hoy,
-          puntualidad,
           notas: null,
         })
       }))
@@ -95,25 +86,6 @@ function BulkPagoModal({ cuotas, onClose, onSuccess }) {
           <div className="flex items-center justify-between px-4 py-3 bg-green-50 rounded-xl">
             <span className="text-sm font-medium text-green-800">Total a cobrar</span>
             <span className="font-bold text-green-700">{formatDOP(total)}</span>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Puntualidad del pago</label>
-            <div className="grid grid-cols-3 gap-2">
-              {PUNTUALIDAD.map(({ value, label, icon: Icon, colors, active }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setPuntualidad(value)}
-                  className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border text-center transition-all duration-150 ${
-                    puntualidad === value ? active : `${colors} opacity-70 hover:opacity-100`
-                  }`}
-                >
-                  <Icon size={16} />
-                  <span className="text-xs font-semibold">{label}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="flex gap-3 pt-1">

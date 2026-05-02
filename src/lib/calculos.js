@@ -31,7 +31,7 @@ export function generarCuotas(montoOriginal, tasaMensual, fechaInicio, meses = 1
   if (fecha.date() <= 15) {
     fecha = fecha.date(15)
   } else {
-    fecha = fecha.date(30)
+    fecha = fecha.endOf('month')
   }
 
   for (let i = 1; i <= totalCuotas; i++) {
@@ -43,8 +43,8 @@ export function generarCuotas(montoOriginal, tasaMensual, fechaInicio, meses = 1
       estado: 'pendiente',
     })
 
-    if (fecha.date() === 15) {
-      fecha = fecha.date(30)
+    if (fecha.date() <= 15) {
+      fecha = fecha.endOf('month')
     } else {
       fecha = fecha.add(1, 'month').date(15)
     }
@@ -73,25 +73,4 @@ export function generarTablaAmortizacion(montoOriginal, tasaMensual, fechaInicio
       saldo: Math.max(0, saldo),
     }
   })
-}
-
-export function calcularScore(cuotas) {
-  if (!cuotas || cuotas.length === 0) return null
-
-  const vencidas = cuotas.filter((c) => c.estado === 'vencida').length
-  const total = cuotas.filter((c) => c.estado !== 'pendiente').length
-
-  if (total === 0) return null
-
-  const tasaMorosidad = vencidas / total
-
-  if (tasaMorosidad === 0) return 3
-  if (tasaMorosidad <= 0.2) return 2
-  return 1
-}
-
-export function tasaSugeridaPorScore(score) {
-  if (score === 3) return { min: 3, max: 4 }
-  if (score === 2) return { min: 5, max: 6 }
-  return { min: 7, max: 8 }
 }

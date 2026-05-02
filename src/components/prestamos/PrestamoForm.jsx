@@ -32,6 +32,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
   const [modoEntrada, setModoEntrada]   = useState('tasa') // 'tasa' | 'cuota'
   const [cuotaInput, setCuotaInput]     = useState('')
   const [preview, setPreview]           = useState(null)
+  const [confirmData, setConfirmData]   = useState(null)
 
   const dq = defaultQuincena()
   const [month, setMonth] = useState(dq.month)
@@ -68,13 +69,18 @@ export default function PrestamoForm({ onClose, onCreate }) {
     setValue('tasaMensual', tasaRedondeada, { shouldValidate: true })
   }
 
-  async function onSubmit(data) {
+  function onSubmit(data) {
+    setConfirmData({ ...data, meses, cuotasPagadas })
+  }
+
+  async function confirmarCreacion() {
+    if (!confirmData) return
     setLoading(true)
     try {
-      await onCreate({ ...data, meses, cuotasPagadas })
-      const msg = cuotasPagadas > 0
-        ? `Préstamo creado — ${cuotasPagadas} de ${meses * 2} cuotas marcadas como pagadas`
-        : `Préstamo creado — ${meses * 2} cuotas generadas`
+      await onCreate(confirmData)
+      const msg = confirmData.cuotasPagadas > 0
+        ? `Préstamo creado — ${confirmData.cuotasPagadas} de ${confirmData.meses * 2} cuotas marcadas como pagadas`
+        : `Préstamo creado — ${confirmData.meses * 2} cuotas generadas`
       toast.success(msg)
       onClose()
     } catch {
@@ -295,12 +301,82 @@ export default function PrestamoForm({ onClose, onCreate }) {
             </button>
             <button type="submit" disabled={loading}
               className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2">
-              {loading && <Loader2 size={14} className="animate-spin" />}
-              Crear préstamo
+              Revisar y confirmar
             </button>
           </div>
         </form>
       </div>
+
+      {/* Modal de confirmación */}
+      {confirmData && preview && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div className="px-5 py-4 border-b">
+              <h3 className="font-semibold text-gray-800">Confirmar préstamo</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Revisa los datos antes de registrar</p>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Empleado</span>
+                  <span className="font-medium text-gray-800">
+                    {empleados.find(e => e.id === confirmData.empleadoId)
+                      ? `${empleados.find(e => e.id === confirmData.empleadoId).apellido}, ${empleados.find(e => e.id === confirmData.empleadoId).nombre}`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Monto</span>
+                  <span className="font-medium text-gray-800">{formatDOP(confirmData.montoOriginal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Tasa mensual</span>
+                  <span className="font-medium text-gray-800">{confirmData.tasaMensual}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Duración</span>
+                  <span className="font-medium text-gray-800">{confirmData.meses} meses ({confirmData.meses * 2} cuotas)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Cuota quincenal</span>
+                  <span className="font-bold text-green-700">{formatDOP(preview.cuotaQuincenal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total intereses</span>
+                  <span className="font-medium text-amber-700">{formatDOP(preview.totalIntereses)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 mt-1">
+                  <span className="text-gray-600 font-medium">Total a pagar</span>
+                  <span className="font-bold text-gray-800">{formatDOP(preview.totalPagar)}</span>
+                </div>
+              </div>
+              {confirmData.cuotasPagadas > 0 && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {confirmData.cuotasPagadas} cuotas se marcarán como ya pagadas
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3 px-5 pb-5">
+              <button
+                type="button"
+                onClick={() => setConfirmData(null)}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={confirmarCreacion}
+                disabled={loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2"
+              >
+                {loading && <Loader2 size={14} className="animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

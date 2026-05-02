@@ -2,13 +2,6 @@ import { Link } from 'react-router-dom'
 import { Pencil, Trash2, UserMinus, ChevronRight, Star, Phone, Building2, CreditCard, AlertCircle, TrendingUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDOP } from '@/lib/utils'
-import { tasaSugeridaPorScore } from '@/lib/calculos'
-
-const SCORE_META = {
-  3: { label: 'Excelente pagador', color: 'text-amber-500', fill: 'fill-amber-400' },
-  2: { label: 'Algunos retrasos',  color: 'text-amber-400', fill: 'fill-amber-300' },
-  1: { label: 'Varios retrasos',   color: 'text-gray-400',  fill: 'fill-gray-300'  },
-}
 
 const SEC_COLORS = {
   'Cerdos': 'bg-pink-100 text-pink-700',
@@ -37,17 +30,13 @@ function avatarColor(nombre) {
   return palette[Math.abs(h) % palette.length]
 }
 
-function Stars({ score }) {
-  if (score === null || score === undefined) return <span className="text-xs text-gray-400">Sin historial</span>
-  const meta = SCORE_META[score] || SCORE_META[1]
+function Stars({ calificacion }) {
+  if (!calificacion) return <span className="text-xs text-gray-400">Sin calificación</span>
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex gap-0.5">
-        {[1, 2, 3].map(i => (
-          <Star key={i} size={13} className={i <= score ? `${meta.color} ${meta.fill}` : 'text-gray-200 fill-gray-200'} />
-        ))}
-      </div>
-      <span className="text-xs text-gray-500">{meta.label}</span>
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star key={i} size={12} className={i <= calificacion ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200'} />
+      ))}
     </div>
   )
 }
@@ -76,7 +65,7 @@ function EmpleadoCard({ emp, stats, onEdit, onDesactivar, onDelete }) {
               </span>
             </div>
             <div className="mt-1">
-              <Stars score={s.score} />
+              <Stars calificacion={emp.calificacion} />
             </div>
           </div>
         </div>
@@ -121,11 +110,6 @@ function EmpleadoCard({ emp, stats, onEdit, onDesactivar, onDelete }) {
           <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
             <Phone size={11} />
             {emp.telefono}
-          </span>
-        )}
-        {s.score !== null && s.score !== undefined && (
-          <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
-            Tasa sugerida: {tasaSugeridaPorScore(s.score).min}%–{tasaSugeridaPorScore(s.score).max}%
           </span>
         )}
       </div>
@@ -186,7 +170,7 @@ function EmpleadoRow({ emp, stats, onEdit, onDesactivar, onDelete }) {
               {emp.secciones.nombre}
             </span>
           )}
-          <Stars score={s.score} />
+          <Stars calificacion={emp.calificacion} />
         </div>
       </div>
       <div className="hidden md:flex items-center gap-6 text-right">

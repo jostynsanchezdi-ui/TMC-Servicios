@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import { useEmpleados } from '@/hooks/useEmpleados'
 import EmpleadosList from '@/components/empleados/EmpleadosList'
 import EmpleadoForm from '@/components/empleados/EmpleadoForm'
-import { calcularScore } from '@/lib/calculos'
 import { formatDOP } from '@/lib/utils'
 import { Plus, Search, LayoutGrid, List, Users, TrendingUp, CreditCard, AlertCircle } from 'lucide-react'
 
@@ -50,10 +49,6 @@ export default function Empleados() {
           if (!map[p.empleado_id]) map[p.empleado_id] = { prestamosActivos: 0, capitalActivo: 0, cuotasPendientes: 0 }
           map[p.empleado_id].cuotasPendientes++
         }
-      })
-
-      Object.keys(map).forEach(empId => {
-        map[empId].score = calcularScore(cuotasByEmp[empId] || [])
       })
 
       setStatsMap(map)

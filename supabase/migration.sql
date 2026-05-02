@@ -26,6 +26,7 @@ CREATE TABLE empleados (
   telefono text,
   activo boolean DEFAULT true,
   notas text,
+  calificacion integer CHECK (calificacion BETWEEN 1 AND 5),
   created_at timestamptz DEFAULT now()
 );
 
@@ -46,7 +47,7 @@ CREATE TABLE prestamos (
 CREATE TABLE cuotas (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   prestamo_id uuid REFERENCES prestamos(id) ON DELETE CASCADE,
-  numero_cuota integer NOT NULL CHECK (numero_cuota BETWEEN 1 AND 24),
+  numero_cuota integer NOT NULL CHECK (numero_cuota BETWEEN 1 AND 72),
   fecha_vencimiento date NOT NULL,
   monto_esperado numeric NOT NULL,
   monto_pagado numeric DEFAULT 0,

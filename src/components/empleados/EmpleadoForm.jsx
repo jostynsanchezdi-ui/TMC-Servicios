@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, Star } from 'lucide-react'
 
 const schema = z.object({
   nombre: z.string().min(1, 'Requerido'),
@@ -14,9 +14,40 @@ const schema = z.object({
   notas: z.string().optional(),
 })
 
+function StarSelector({ value, onChange }) {
+  const [hover, setHover] = useState(0)
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(i => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onChange(i === value ? null : i)}
+          onMouseEnter={() => setHover(i)}
+          onMouseLeave={() => setHover(0)}
+          className="transition-transform hover:scale-110"
+        >
+          <Star
+            size={24}
+            className={
+              i <= (hover || value || 0)
+                ? 'fill-amber-400 text-amber-400'
+                : 'fill-none text-gray-300'
+            }
+          />
+        </button>
+      ))}
+      {value && (
+        <span className="text-xs text-gray-400 self-center ml-1">{value}/5</span>
+      )}
+    </div>
+  )
+}
+
 export default function EmpleadoForm({ empleado, onClose, onCreate, onUpdate }) {
   const [secciones, setSecciones] = useState([])
   const [loading, setLoading] = useState(false)
+  const [calificacion, setCalificacion] = useState(empleado?.calificacion || null)
   const isEdit = !!empleado
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
@@ -32,10 +63,10 @@ export default function EmpleadoForm({ empleado, onClose, onCreate, onUpdate }) 
     setLoading(true)
     try {
       if (isEdit) {
-        await onUpdate(empleado.id, data)
+        await onUpdate(empleado.id, { ...data, calificacion })
         toast.success('Empleado actualizado')
       } else {
-        await onCreate(data)
+        await onCreate({ ...data, calificacion })
         toast.success('Empleado creado')
       }
       onClose()
@@ -79,6 +110,12 @@ export default function EmpleadoForm({ empleado, onClose, onCreate, onUpdate }) 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
             <input {...register('telefono')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="809-000-0000" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Calificación</label>
+            <StarSelector value={calificacion} onChange={setCalificacion} />
+            <p className="text-xs text-gray-400 mt-1">Toca una estrella para calificar. Toca la misma para quitar.</p>
           </div>
 
           <div>

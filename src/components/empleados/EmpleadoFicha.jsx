@@ -2,24 +2,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Link } from 'react-router-dom'
 import { formatDOP, formatFecha, formatFechaHora } from '@/lib/utils'
-import { calcularScore, tasaSugeridaPorScore } from '@/lib/calculos'
 import { toast } from 'sonner'
 import {
   Phone, Building2, Star, CreditCard, TrendingUp, Clock,
-  CheckCircle2, AlertTriangle, Zap, ChevronRight, FileText
+  AlertTriangle, ChevronRight, FileText
 } from 'lucide-react'
-
-const SCORE_META = {
-  3: { label: 'Excelente pagador', stars: 3, color: 'text-amber-500', fill: 'fill-amber-400', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-800' },
-  2: { label: 'Algunos retrasos',  stars: 2, color: 'text-amber-400', fill: 'fill-amber-300', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
-  1: { label: 'Varios retrasos',   stars: 1, color: 'text-gray-400',  fill: 'fill-gray-300',  bg: 'bg-gray-50',  badge: 'bg-gray-100 text-gray-600' },
-}
-
-const PUNTUALIDAD_META = {
-  prematuro: { icon: Zap,          label: 'Prematuro', cls: 'bg-blue-100 text-blue-700' },
-  a_tiempo:  { icon: CheckCircle2, label: 'A tiempo',  cls: 'bg-green-100 text-green-700' },
-  tardio:    { icon: Clock,        label: 'Tardío',    cls: 'bg-amber-100 text-amber-700' },
-}
 
 function avatarColor(nombre) {
   const palette = [
@@ -33,23 +20,38 @@ function avatarColor(nombre) {
   return palette[Math.abs(h) % palette.length]
 }
 
-function Stars({ score }) {
-  if (score === null || score === undefined) return null
-  const meta = SCORE_META[score] || SCORE_META[1]
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3].map(i => (
-        <Star key={i} size={16} className={i <= score ? `${meta.color} ${meta.fill}` : 'text-white/30 fill-white/20'} />
-      ))}
-    </div>
-  )
-}
-
 function ProgressBar({ value, max, color = 'bg-green-400' }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
       <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+function StarRating({ value, onChange }) {
+  const [hover, setHover] = useState(0)
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(i => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onChange(i)}
+          onMouseEnter={() => setHover(i)}
+          onMouseLeave={() => setHover(0)}
+          className="transition-transform hover:scale-110"
+        >
+          <Star
+            size={22}
+            className={
+              i <= (hover || value || 0)
+                ? 'fill-amber-400 text-amber-400'
+                : 'text-white/30 fill-transparent'
+            }
+          />
+        </button>
+      ))}
     </div>
   )
 }
@@ -83,6 +85,13 @@ export default function EmpleadoFicha({ empleadoId }) {
     cargar()
   }, [empleadoId])
 
+  async function actualizarCalificacion(nueva) {
+    const { error } = await supabase.from('empleados').update({ calificacion: nueva }).eq('id', empleadoId)
+    if (error) { toast.error('Error al guardar calificación'); return }
+    setEmpleado(e => ({ ...e, calificacion: nueva }))
+    toast.success('Calificación actualizada')
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center py-24">
       <div className="flex flex-col items-center gap-3">
@@ -95,22 +104,11 @@ export default function EmpleadoFicha({ empleadoId }) {
   const nombre = `${empleado.nombre} ${empleado.apellido}`
   const initials = `${empleado.nombre?.[0] || ''}${empleado.apellido?.[0] || ''}`.toUpperCase()
   const av = avatarColor(nombre)
-  const score = calcularScore(cuotas)
-  const scoreMeta = score ? SCORE_META[score] : null
-  const tasa = score ? tasaSugeridaPorScore(score) : null
 
   const activos = prestamos.filter(p => p.estado === 'activo')
   const capitalActivo = activos.reduce((s, p) => s + Number(p.monto_original), 0)
   const totalPagado = pagos.reduce((s, p) => s + Number(p.monto), 0)
   const cuotasPendientes = cuotas.filter(c => c.estado === 'pendiente' || c.estado === 'parcial').length
-  const cuotasPagadas = cuotas.filter(c => c.estado === 'pagada').length
-
-  // Puntualidad breakdown
-  const puntualidadCount = pagos.reduce((acc, p) => {
-    if (p.puntualidad) acc[p.puntualidad] = (acc[p.puntualidad] || 0) + 1
-    return acc
-  }, {})
-  const totalConPuntualidad = Object.values(puntualidadCount).reduce((s, v) => s + v, 0)
 
   return (
     <div className="space-y-5">
@@ -122,41 +120,34 @@ export default function EmpleadoFicha({ empleadoId }) {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="text-2xl font-bold text-white leading-tight">{nombre}</h2>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                    {empleado.secciones?.nombre && (
-                      <span className="flex items-center gap-1 text-green-200 text-sm">
-                        <Building2 size={13} />
-                        {empleado.secciones.nombre}
-                      </span>
-                    )}
-                    {empleado.telefono && (
-                      <span className="flex items-center gap-1 text-green-200 text-sm">
-                        <Phone size={13} />
-                        {empleado.telefono}
-                      </span>
-                    )}
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${empleado.activo ? 'bg-green-400/20 text-green-200' : 'bg-white/10 text-white/50'}`}>
-                      {empleado.activo ? 'Activo' : 'Inactivo'}
+              <div>
+                <h2 className="text-2xl font-bold text-white leading-tight">{nombre}</h2>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  {empleado.secciones?.nombre && (
+                    <span className="flex items-center gap-1 text-green-200 text-sm">
+                      <Building2 size={13} />
+                      {empleado.secciones.nombre}
                     </span>
-                  </div>
+                  )}
+                  {empleado.telefono && (
+                    <span className="flex items-center gap-1 text-green-200 text-sm">
+                      <Phone size={13} />
+                      {empleado.telefono}
+                    </span>
+                  )}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${empleado.activo ? 'bg-green-400/20 text-green-200' : 'bg-white/10 text-white/50'}`}>
+                    {empleado.activo ? 'Activo' : 'Inactivo'}
+                  </span>
                 </div>
               </div>
 
-              {/* Score */}
-              {scoreMeta ? (
-                <div className="flex items-center gap-3 mt-3">
-                  <Stars score={score} />
-                  <span className="text-sm text-green-100">{scoreMeta.label}</span>
-                  <span className="text-xs text-green-300 bg-white/10 px-2.5 py-0.5 rounded-full">
-                    Tasa sugerida: {tasa.min}%–{tasa.max}%
-                  </span>
-                </div>
-              ) : (
-                <p className="text-sm text-green-300 mt-3">Sin historial de pagos</p>
-              )}
+              {/* Calificacion — 5 estrellas manuales */}
+              <div className="mt-3 flex items-center gap-3">
+                <StarRating value={empleado.calificacion} onChange={actualizarCalificacion} />
+                <span className="text-xs text-green-300">
+                  {empleado.calificacion ? `${empleado.calificacion}/5` : 'Sin calificación'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -180,28 +171,6 @@ export default function EmpleadoFicha({ empleadoId }) {
           ))}
         </div>
       </div>
-
-      {/* Puntualidad badges — only if there are pagos with puntualidad */}
-      {totalConPuntualidad > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Puntualidad de pagos</p>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(PUNTUALIDAD_META).map(([key, meta]) => {
-              const count = puntualidadCount[key] || 0
-              const pct = totalConPuntualidad > 0 ? ((count / totalConPuntualidad) * 100).toFixed(0) : 0
-              const Icon = meta.icon
-              return (
-                <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${meta.cls}`}>
-                  <Icon size={13} />
-                  <span className="text-xs font-semibold">{meta.label}</span>
-                  <span className="text-xs font-bold">{count}</span>
-                  <span className="text-xs opacity-70">({pct}%)</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
@@ -265,7 +234,6 @@ export default function EmpleadoFicha({ empleadoId }) {
                   </Link>
                 </div>
 
-                {/* Progress */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="text-gray-500">{pagadas}/{total} cuotas pagadas</span>
@@ -297,28 +265,18 @@ export default function EmpleadoFicha({ empleadoId }) {
             <p className="p-12 text-center text-gray-400 text-sm">Sin pagos registrados</p>
           ) : (
             <div className="divide-y divide-gray-50">
-              {pagos.map((p, i) => {
-                const pt = p.puntualidad ? PUNTUALIDAD_META[p.puntualidad] : null
-                const PtIcon = pt?.icon
-                return (
-                  <div key={p.id || i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50">
-                    <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-                      <TrendingUp size={14} className="text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500">{formatFechaHora(p.fecha_pago)}</p>
-                      {p.notas && <p className="text-xs text-gray-400 truncate">{p.notas}</p>}
-                    </div>
-                    {pt && (
-                      <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pt.cls}`}>
-                        <PtIcon size={10} />
-                        {pt.label}
-                      </span>
-                    )}
-                    <span className="text-sm font-bold text-green-700 flex-shrink-0">{formatDOP(p.monto)}</span>
+              {pagos.map((p, i) => (
+                <div key={p.id || i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50">
+                  <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp size={14} className="text-green-600" />
                   </div>
-                )
-              })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">{formatFechaHora(p.fecha_pago)}</p>
+                    {p.notas && <p className="text-xs text-gray-400 truncate">{p.notas}</p>}
+                  </div>
+                  <span className="text-sm font-bold text-green-700 flex-shrink-0">{formatDOP(p.monto)}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

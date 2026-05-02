@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import dayjs from 'dayjs'
+import { RefreshCw } from 'lucide-react'
 import KPICards from '@/components/dashboard/KPICards'
 import GraficaBarras from '@/components/dashboard/GraficaBarras'
 import AlertasPanel from '@/components/dashboard/AlertasPanel'
@@ -34,10 +35,13 @@ function getQuincenaDates() {
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [drilldown, setDrilldown] = useState(null)
 
-  useEffect(() => {
-    async function cargarStats() {
+  const cargarStats = useCallback(async (silencioso = false) => {
+    if (!silencioso) setLoading(true)
+    else setRefreshing(true)
+    try {
       const [{ data: prestamos }, { data: cuotas }, { data: pagos }] = await Promise.all([
         supabase.from('prestamos').select('*, empleados(secciones(nombre), nombre, apellido)'),
         supabase.from('cuotas').select('*'),
@@ -137,10 +141,15 @@ export default function Dashboard() {
         cuotas: allCuotas,
         pagos: allPagos,
       })
+      if (!silencioso) setLoading(false)
+      else setRefreshing(false)
+    } catch {
       setLoading(false)
+      setRefreshing(false)
     }
-    cargarStats()
   }, [])
+
+  useEffect(() => { cargarStats() }, [cargarStats])
 
   if (loading) {
     return (
@@ -155,9 +164,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Resumen general del portafolio de préstamos</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Resumen general del portafolio de préstamos</p>
+        </div>
+        <button
+          onClick={() => cargarStats(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          Actualizar
+        </button>
       </div>
 
       <KPICards stats={stats} onCardClick={(type) => setDrilldown({ type })} />
