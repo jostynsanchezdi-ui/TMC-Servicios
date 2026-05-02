@@ -116,7 +116,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
             >
               <option value="">Seleccionar...</option>
               {empleados.map((e) => (
-                <option key={e.id} value={e.id}>{e.apellido}, {e.nombre}</option>
+                <option key={e.id} value={e.id}>{[e.apellido, e.nombre].filter(Boolean).join(', ')}</option>
               ))}
             </select>
             {errors.empleadoId && <p className="text-red-500 text-xs mt-1">{errors.empleadoId.message}</p>}
@@ -317,7 +317,7 @@ export default function PrestamoForm({ onClose, onCreate }) {
                   <span className="text-gray-500">Empleado</span>
                   <span className="font-medium text-gray-800">
                     {empleados.find(e => e.id === confirmData.empleadoId)
-                      ? `${empleados.find(e => e.id === confirmData.empleadoId).apellido}, ${empleados.find(e => e.id === confirmData.empleadoId).nombre}`
+                      ? [empleados.find(e => e.id === confirmData.empleadoId)?.apellido, empleados.find(e => e.id === confirmData.empleadoId)?.nombre].filter(Boolean).join(', ')
                       : '—'}
                   </span>
                 </div>

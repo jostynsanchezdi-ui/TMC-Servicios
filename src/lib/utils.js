@@ -46,5 +46,5 @@ export function quincenaActual() {
 
 export function nombreCompleto(empleado) {
   if (!empleado) return ''
-  return `${empleado.nombre} ${empleado.apellido}`
+  return [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
 }
