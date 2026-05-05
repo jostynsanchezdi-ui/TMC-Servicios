@@ -66,13 +66,14 @@ function StatCard({ icon: Icon, label, value, sub, sub2, iconBg, iconColor, onCl
 }
 
 // ── Capital Restante Card ─────────────────────────────────────
-function CapitalRestanteCard({ prestamos, pagos }) {
+function CapitalRestanteCard({ prestamos, pagos, cuotas }) {
   const dq = defaultQuincena()
   const [month, setMonth] = useState(dq.month)
   const [half, setHalf] = useState(dq.half)
 
   const { valor, proyectado } = useMemo(() => {
     const { hasta } = quincenaDates(month, half)
+    const hoy = dayjs().format('YYYY-MM-DD')
     const esFuturo = dayjs(hasta).isAfter(dayjs(), 'day')
     const activos = prestamos.filter(p => p.estado === 'activo')
     const total = activos.reduce((s, p) => {
@@ -83,10 +84,15 @@ function CapitalRestanteCard({ prestamos, pagos }) {
       const capitalPagado = pagos
         .filter(pg => pg.prestamo_id === p.id && (pg.fecha_pago || '').slice(0, 10) <= hasta)
         .reduce((ss, pg) => ss + Number(pg.monto) * (1 - ratio), 0)
-      return s + Math.max(0, Number(p.monto_original) - capitalPagado)
+      const capitalProyectado = esFuturo
+        ? cuotas
+          .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento <= hasta && (c.estado === 'pendiente' || c.estado === 'parcial'))
+          .reduce((ss, c) => ss + Number(c.monto_esperado) * (1 - ratio), 0)
+        : 0
+      return s + Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
     }, 0)
     return { valor: total, proyectado: esFuturo }
-  }, [month, half, prestamos, pagos])
+  }, [month, half, prestamos, pagos, cuotas])
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
@@ -158,15 +164,17 @@ function TasaPromedioCard({ prestamos, cuotas }) {
 }
 
 // ── Tasa de Retorno Card ──────────────────────────────────────
-function TasaRetornoCard({ prestamos, cuotas, pagos, statsRetorno }) {
+function TasaRetornoCard({ prestamos, cuotas, pagos }) {
   const dq = defaultQuincena()
   const [month, setMonth] = useState(dq.month)
-  const [half, setHalf] = useState(dq.half)
+  const [half, setHalf]   = useState(dq.half)
 
-  const { valor, interesEsperado, proyectado } = useMemo(() => {
+  const { valor, interesQuincena, capitalRestante, proyectado } = useMemo(() => {
     const { desde, hasta } = quincenaDates(month, half)
+    const hoy = dayjs().format('YYYY-MM-DD')
     const esFuturo = dayjs(hasta).isAfter(dayjs(), 'day')
     const activos = prestamos.filter(p => p.estado === 'activo')
+    const activosIds = new Set(activos.map(p => p.id))
 
     const ratioMap = {}
     activos.forEach(p => {
@@ -176,21 +184,27 @@ function TasaRetornoCard({ prestamos, cuotas, pagos, statsRetorno }) {
       ratioMap[p.id] = denom > 0 ? tasa / denom : 0.5
     })
 
-    const capitalRestante = activos.reduce((s, p) => {
+    // Capital restante en la fecha seleccionada (con proyección si es futuro)
+    const capital = activos.reduce((s, p) => {
       const ratio = ratioMap[p.id] ?? 0.5
       const capitalPagado = pagos
         .filter(pg => pg.prestamo_id === p.id && (pg.fecha_pago || '').slice(0, 10) <= hasta)
         .reduce((ss, pg) => ss + Number(pg.monto) * (1 - ratio), 0)
-      return s + Math.max(0, Number(p.monto_original) - capitalPagado)
+      const capitalProyectado = esFuturo
+        ? cuotas
+          .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento <= hasta && (c.estado === 'pendiente' || c.estado === 'parcial'))
+          .reduce((ss, c) => ss + Number(c.monto_esperado) * (1 - ratio), 0)
+        : 0
+      return s + Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
     }, 0)
 
-    const activosIds = new Set(activos.map(p => p.id))
+    // Interés de la quincena seleccionada
     const interes = cuotas
       .filter(c => c.fecha_vencimiento >= desde && c.fecha_vencimiento <= hasta && c.estado !== 'cancelada' && activosIds.has(c.prestamo_id))
       .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0), 0)
 
-    const tasa = capitalRestante > 0 ? (interes / capitalRestante) * 100 : 0
-    return { valor: tasa, interesEsperado: interes, proyectado: esFuturo }
+    const tasa = capital > 0 ? (interes / capital) * 100 : 0
+    return { valor: tasa, interesQuincena: interes, capitalRestante: capital, proyectado: esFuturo }
   }, [month, half, prestamos, cuotas, pagos])
 
   return (
@@ -208,7 +222,7 @@ function TasaRetornoCard({ prestamos, cuotas, pagos, statsRetorno }) {
       <div className="mt-2">
         <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Tasa de Retorno</p>
         <p className="text-gray-900 text-xl font-bold mt-1 leading-none">{valor.toFixed(2)}%</p>
-        <p className="text-gray-400 text-xs mt-1"><span className="capitalize">{quincenaLabel(month, half)}</span> · {formatDOP(interesEsperado)} interés</p>
+        <p className="text-gray-400 text-xs mt-1">{formatDOP(interesQuincena)} interés · {formatDOP(capitalRestante)} capital</p>
         <QuincenaSelector month={month} half={half} onChange={(m, h) => { setMonth(m); setHalf(h) }} showFullMonth />
       </div>
     </div>
@@ -296,7 +310,7 @@ export default function KPICards({ stats, onCardClick }) {
       />
 
       {/* 4 — Capital restante */}
-      <CapitalRestanteCard prestamos={stats.prestamos} pagos={stats.pagos} />
+      <CapitalRestanteCard prestamos={stats.prestamos} pagos={stats.pagos} cuotas={stats.cuotas} />
 
       {/* 5 — Ganancias netas */}
       <GananciasNetasCard cuotas={stats.cuotas} prestamos={stats.prestamos} />
