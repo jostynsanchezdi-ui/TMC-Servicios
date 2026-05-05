@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import { RefreshCw } from 'lucide-react'
 import KPICards from '@/components/dashboard/KPICards'
 import GraficaBarras from '@/components/dashboard/GraficaBarras'
+import GraficaLineas from '@/components/dashboard/GraficaLineas'
 import AlertasPanel from '@/components/dashboard/AlertasPanel'
 import PrestamosRecientes from '@/components/dashboard/PrestamosRecientes'
 import ResumenSecciones from '@/components/dashboard/ResumenSecciones'
@@ -180,6 +181,12 @@ export default function Dashboard() {
       </div>
 
       <KPICards stats={stats} onCardClick={(type) => setDrilldown({ type })} />
+
+      <GraficaLineas
+        prestamos={stats.prestamos}
+        cuotas={stats.cuotas}
+        pagos={stats.pagos}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
