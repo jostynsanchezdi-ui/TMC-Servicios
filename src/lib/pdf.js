@@ -5,10 +5,11 @@ import { formatDOP, formatFecha } from './utils'
 
 const EMPRESA = 'TMC Servicios'
 const COLOR_PRIMARIO = [22, 163, 74] // verde
+const COLOR_AZUL = [30, 53, 111]     // azul oscuro dashboard
 
-function encabezado(doc, titulo) {
+function encabezado(doc, titulo, color = COLOR_PRIMARIO) {
   doc.setFontSize(16)
-  doc.setTextColor(...COLOR_PRIMARIO)
+  doc.setTextColor(...color)
   doc.text(EMPRESA, 14, 16)
   doc.setFontSize(11)
   doc.setTextColor(60, 60, 60)
@@ -16,7 +17,7 @@ function encabezado(doc, titulo) {
   doc.setFontSize(9)
   doc.setTextColor(120, 120, 120)
   doc.text(`Generado: ${dayjs().format('DD/MM/YYYY HH:mm')}`, 14, 30)
-  doc.setDrawColor(...COLOR_PRIMARIO)
+  doc.setDrawColor(...color)
   doc.line(14, 33, 196, 33)
 }
 
@@ -191,7 +192,7 @@ export function pdfResumenGeneral(kpis, prestamos, cuotas = []) {
 
 export function pdfQuincena(cuotas, fechaCorte) {
   const doc = new jsPDF()
-  encabezado(doc, `Panel de Quincena — ${formatFecha(fechaCorte)}`)
+  encabezado(doc, `Panel de Quincena — ${formatFecha(fechaCorte)}`, COLOR_AZUL)
 
   // Group by section
   const porSeccion = {}
@@ -202,54 +203,46 @@ export function pdfQuincena(cuotas, fechaCorte) {
   })
 
   const body = []
-  const nonDataRows = new Set() // section headers + totals — no checkbox drawn here
+  const nonDataRows = new Set()
 
   Object.entries(porSeccion).forEach(([seccion, secCuotas]) => {
-    // Section header
     nonDataRows.add(body.length)
     body.push([{
       content: seccion.toUpperCase(),
-      colSpan: 6,
-      styles: { fillColor: COLOR_PRIMARIO, textColor: 255, fontStyle: 'bold', fontSize: 10 },
+      colSpan: 4,
+      styles: { fillColor: COLOR_AZUL, textColor: 255, fontStyle: 'bold', fontSize: 10 },
     }])
 
     secCuotas.forEach(c => {
       body.push([
         '',
-        `${c.prestamos?.empleados?.nombre} ${c.prestamos?.empleados?.apellido}`,
-        formatDOP(c.prestamos?.monto_original),
+        `${c.prestamos?.empleados?.nombre} ${c.prestamos?.empleados?.apellido || ''}`.trim(),
         formatDOP(c.monto_esperado),
-        formatDOP(c.monto_pagado || 0),
-        c.estado,
+        `#${c.numero_cuota}`,
       ])
     })
 
-    // Section subtotal
     const secEsperado = secCuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
-    const secCobrado = secCuotas.reduce((s, c) => s + Number(c.monto_pagado || 0), 0)
     nonDataRows.add(body.length)
     body.push([
-      { content: `Subtotal ${seccion}`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },
-      { content: formatDOP(secEsperado), styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },
-      { content: formatDOP(secCobrado), styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },
-      { content: `${secCuotas.filter(c => c.estado === 'pagada').length}/${secCuotas.length}`, styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },
+      { content: `Subtotal ${seccion}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },
+      { content: formatDOP(secEsperado), styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45], halign: 'right' } },
+      { content: `${secCuotas.length} cuota${secCuotas.length !== 1 ? 's' : ''}`, styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45], halign: 'center' } },
     ])
   })
 
   autoTable(doc, {
     startY: 38,
-    head: [['', 'Empleado', 'Préstamo', 'Cuota Esperada', 'Pagado', 'Estado']],
+    head: [['', 'Empleado', 'Monto Cuota', 'Cuota #']],
     body,
     headStyles: { fillColor: [50, 50, 50] },
     alternateRowStyles: { fillColor: [248, 250, 248] },
     styles: { fontSize: 10, overflow: 'ellipsize', cellWidth: 'wrap' },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 58 },
-      2: { cellWidth: 32, halign: 'right' },
-      3: { cellWidth: 32, halign: 'right' },
-      4: { cellWidth: 32, halign: 'right' },
-      5: { cellWidth: 20, halign: 'center' },
+      1: { cellWidth: 100 },
+      2: { cellWidth: 45, halign: 'right' },
+      3: { cellWidth: 27, halign: 'center' },
     },
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 0 && !nonDataRows.has(data.row.index)) {
@@ -264,12 +257,15 @@ export function pdfQuincena(cuotas, fechaCorte) {
 
   // Grand total
   const totalEsperado = cuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
-  const totalCobrado = cuotas.reduce((s, c) => s + Number(c.monto_pagado || 0), 0)
-  const finalY = (doc.lastAutoTable?.finalY || 38) + 6
-  doc.setFontSize(9)
-  doc.setTextColor(40, 40, 40)
+  const finalY = (doc.lastAutoTable?.finalY || 38) + 8
+  doc.setFontSize(13)
+  doc.setTextColor(...COLOR_AZUL)
   doc.setFont(undefined, 'bold')
-  doc.text(`Total esperado: ${formatDOP(totalEsperado)}     Total cobrado: ${formatDOP(totalCobrado)}     Cuotas: ${cuotas.length}`, 14, finalY)
+  doc.text(`Total esperado: ${formatDOP(totalEsperado)}`, 14, finalY)
+  doc.setFontSize(9)
+  doc.setTextColor(120, 120, 120)
+  doc.setFont(undefined, 'normal')
+  doc.text(`${cuotas.length} cuota${cuotas.length !== 1 ? 's' : ''}`, 14, finalY + 6)
 
   doc.save(`quincena_${dayjs(fechaCorte).format('YYYYMMDD')}.pdf`)
 }
