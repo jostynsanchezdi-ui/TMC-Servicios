@@ -51,6 +51,7 @@ export function usePrestamos(empleadoId = null) {
 
     const cuotas = generarCuotas(montoOriginal, tasa, fechaInicio, meses).map((c) => ({
       ...c,
+      monto_esperado: parseFloat((cuotaQuincenalOverride ?? c.monto_esperado).toFixed(2)),
       prestamo_id: prestamo.id,
       ...(c.numero_cuota <= cuotasPagadas ? {
         estado: 'pagada',
