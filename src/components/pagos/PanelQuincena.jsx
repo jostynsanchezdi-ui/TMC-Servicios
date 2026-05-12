@@ -121,13 +121,13 @@ export default function PanelQuincena() {
     setSelected(new Set())
     const { data, error } = await supabase
       .from('cuotas')
-      .select('*, prestamos(id, monto_original, empleado_id, empleados(id, nombre, apellido, secciones(nombre)))')
+      .select('*, prestamos(id, monto_original, estado, empleado_id, empleados(id, nombre, apellido, secciones(nombre)))')
       .eq('fecha_vencimiento', fecha)
       .neq('estado', 'cancelada')
       .order('estado')
 
     if (error) { toast.error('Error cargando quincena'); return }
-    setCuotas(data || [])
+    setCuotas((data || []).filter(c => c.prestamos?.estado === 'activo'))
     setLoading(false)
   }
 
