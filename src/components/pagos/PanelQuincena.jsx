@@ -123,6 +123,7 @@ export default function PanelQuincena() {
       .from('cuotas')
       .select('*, prestamos(id, monto_original, empleado_id, empleados(id, nombre, apellido, secciones(nombre)))')
       .eq('fecha_vencimiento', fecha)
+      .neq('estado', 'cancelada')
       .order('estado')
 
     if (error) { toast.error('Error cargando quincena'); return }
