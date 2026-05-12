@@ -16,10 +16,15 @@ const estadoClases = {
   vencida: 'bg-red-100 text-red-700',
 }
 
+// Usa cuota_quincenal del préstamo (valor ingresado por el usuario) como fuente de verdad
+function montoEsperado(c) {
+  return parseFloat(Number(c.prestamos?.cuota_quincenal ?? c.monto_esperado).toFixed(2))
+}
+
 function BulkPagoModal({ cuotas, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
 
-  const total = cuotas.reduce((s, c) => s + (Number(c.monto_esperado) - Number(c.monto_pagado || 0)), 0)
+  const total = cuotas.reduce((s, c) => s + (montoEsperado(c) - Number(c.monto_pagado || 0)), 0)
 
   async function confirmar() {
     setLoading(true)
@@ -27,10 +32,11 @@ function BulkPagoModal({ cuotas, onClose, onSuccess }) {
       const hoy = new Date().toISOString().slice(0, 10)
 
       await Promise.all(cuotas.map(async (c) => {
-        const pendiente = Number(c.monto_esperado) - Number(c.monto_pagado || 0)
+        const esperado = montoEsperado(c)
+        const pendiente = esperado - Number(c.monto_pagado || 0)
 
         await supabase.from('cuotas').update({
-          monto_pagado: Number(c.monto_esperado),
+          monto_pagado: esperado,
           estado: 'pagada',
           fecha_pago: hoy,
         }).eq('id', c.id)
@@ -68,7 +74,7 @@ function BulkPagoModal({ cuotas, onClose, onSuccess }) {
         <div className="p-5 space-y-4">
           <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 max-h-56 overflow-y-auto">
             {cuotas.map(c => {
-              const pendiente = Number(c.monto_esperado) - Number(c.monto_pagado || 0)
+              const pendiente = montoEsperado(c) - Number(c.monto_pagado || 0)
               return (
                 <div key={c.id} className="px-4 py-2.5 flex items-center justify-between text-sm">
                   <div>
@@ -121,7 +127,7 @@ export default function PanelQuincena() {
     setSelected(new Set())
     const { data, error } = await supabase
       .from('cuotas')
-      .select('*, prestamos(id, monto_original, estado, empleado_id, empleados(id, nombre, apellido, secciones(nombre)))')
+      .select('*, prestamos(id, monto_original, estado, cuota_quincenal, empleado_id, empleados(id, nombre, apellido, secciones(nombre)))')
       .eq('fecha_vencimiento', fecha)
       .neq('estado', 'cancelada')
       .order('estado')
@@ -143,7 +149,7 @@ export default function PanelQuincena() {
     return groups
   }, [cuotas])
 
-  const totalEsperado = cuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
+  const totalEsperado = cuotas.reduce((s, c) => s + montoEsperado(c), 0)
   const totalCobrado = cuotas.reduce((s, c) => s + Number(c.monto_pagado || 0), 0)
   const pagadas = cuotas.filter(c => c.estado === 'pagada').length
   const pendientesCuotas = cuotas.filter(c => c.estado !== 'pagada')
@@ -234,7 +240,7 @@ export default function PanelQuincena() {
             const unpaid = secCuotas.filter(c => c.estado !== 'pagada')
             const allSecSelected = unpaid.length > 0 && unpaid.every(c => selected.has(c.id))
             const someSecSelected = !allSecSelected && unpaid.some(c => selected.has(c.id))
-            const secTotal = secCuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
+            const secTotal = secCuotas.reduce((s, c) => s + montoEsperado(c), 0)
             const secPagadas = secCuotas.filter(c => c.estado === 'pagada').length
 
             return (
@@ -297,7 +303,7 @@ export default function PanelQuincena() {
                         </div>
 
                         <div className="text-right hidden sm:block flex-shrink-0">
-                          <p className="text-sm font-medium text-gray-700">{formatDOP(c.monto_esperado)}</p>
+                          <p className="text-sm font-medium text-gray-700">{formatDOP(montoEsperado(c))}</p>
                           {c.monto_pagado > 0 && (
                             <p className="text-xs text-green-600">pagado {formatDOP(c.monto_pagado)}</p>
                           )}
@@ -349,7 +355,7 @@ export default function PanelQuincena() {
           </span>
           <span className="text-white/30">·</span>
           <span className="text-sm text-green-400 font-medium">
-            {formatDOP(selectedCuotas.reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0))}
+            {formatDOP(selectedCuotas.reduce((s, c) => s + montoEsperado(c) - Number(c.monto_pagado || 0), 0))}
           </span>
           <button
             onClick={() => setBulkModal(true)}

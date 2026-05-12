@@ -46,7 +46,7 @@ export default function RegistroPago({ cuota, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [puntualidad, setPuntualidad] = useState('a_tiempo')
 
-  const esperado = parseFloat(Number(cuota.monto_esperado).toFixed(2))
+  const esperado = parseFloat(Number(cuota.prestamos?.cuota_quincenal ?? cuota.monto_esperado).toFixed(2))
   const yaPagado = parseFloat(Number(cuota.monto_pagado || 0).toFixed(2))
   const pendiente = parseFloat((esperado - yaPagado).toFixed(2))
 
