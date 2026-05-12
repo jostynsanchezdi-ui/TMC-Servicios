@@ -192,8 +192,6 @@ export default function TablaQuincenas() {
                       {columnas.map(col => {
                         const cuota = cuotaMap[p.id]?.[col.fecha]
                         const monto = montoReal(p, cuota)
-                        const pagada = cuota?.estado === 'pagada'
-                        const parcial = cuota?.estado === 'parcial'
 
                         if (!cuota) {
                           return (
@@ -203,8 +201,23 @@ export default function TablaQuincenas() {
                           )
                         }
 
-                        const bgColor = pagada ? '#dcfce7' : parcial ? '#fef9c3' : '#fee2e2'
-                        const textColor = pagada ? '#166534' : parcial ? '#92400e' : '#991b1b'
+                        const hoyDate = dayjs().format('YYYY-MM-DD')
+                        const esExceso   = cuota.estado === 'pagada' && Number(cuota.monto_pagado) > monto + 0.01
+                        const esPagada   = cuota.estado === 'pagada' && !esExceso
+                        const esParcial  = cuota.estado === 'parcial'
+                        const esVencida  = (cuota.estado === 'pendiente' || cuota.estado === 'vencida') && col.fecha < hoyDate
+                        // pendiente futuro: sin color de alerta
+
+                        const bgColor   = esExceso  ? '#ede9fe'
+                                        : esPagada  ? '#dcfce7'
+                                        : esParcial ? '#fef9c3'
+                                        : esVencida ? '#fee2e2'
+                                        : 'transparent'
+                        const textColor = esExceso  ? '#5b21b6'
+                                        : esPagada  ? '#166534'
+                                        : esParcial ? '#92400e'
+                                        : esVencida ? '#991b1b'
+                                        : '#6b7280'
 
                         return (
                           <td
@@ -212,7 +225,7 @@ export default function TablaQuincenas() {
                             className="border border-gray-100 text-center py-1.5 px-1"
                             style={{ backgroundColor: bgColor }}
                           >
-                            {pagada ? (
+                            {esPagada || esExceso ? (
                               <span className="flex items-center justify-center gap-0.5" style={{ color: textColor }}>
                                 <CheckCircle2 size={11} />
                                 <span className="text-[10px] font-medium">{formatDOP(monto).replace('RD$', '').trim()}</span>
