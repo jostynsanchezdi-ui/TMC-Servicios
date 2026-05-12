@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { supabase } from '@/lib/supabase'
 import { formatDOP } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const MESES_VISIBLES = 6
+// 4 meses atrás + mes actual + 12 adelante = 17 meses en total
+const MESES_ATRAS = 4
+const MESES_TOTAL = 17
 const AZUL = '#1e356f'
 
 function generarColumnas(startMonth, numMeses) {
@@ -32,12 +34,12 @@ function generarColumnas(startMonth, numMeses) {
 }
 
 export default function TablaQuincenas() {
-  const [startMonth, setStartMonth] = useState(() => dayjs().subtract(1, 'month').startOf('month'))
+  const startMonth = useMemo(() => dayjs().subtract(MESES_ATRAS, 'month').startOf('month'), [])
   const [prestamos, setPrestamos] = useState([])
   const [cuotas, setCuotas] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const columnas = useMemo(() => generarColumnas(startMonth, MESES_VISIBLES), [startMonth])
+  const columnas = useMemo(() => generarColumnas(startMonth, MESES_TOTAL), [startMonth])
 
   useEffect(() => {
     async function cargar() {
@@ -98,6 +100,7 @@ export default function TablaQuincenas() {
     )
   }
 
+  const hoy = dayjs().format('YYYY-MM')
   const totalPorColumna = columnas.map(col => {
     let total = 0
     prestamos.forEach(p => {
@@ -109,26 +112,7 @@ export default function TablaQuincenas() {
 
   return (
     <div className="space-y-3">
-      {/* Navegación de meses */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setStartMonth(m => m.subtract(1, 'month'))}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <ChevronLeft size={16} className="text-gray-500" />
-        </button>
-        <span className="text-sm text-gray-600 font-medium min-w-[160px] text-center">
-          {columnas[0].mes.format('MMM YYYY')} – {columnas[columnas.length - 1].mes.format('MMM YYYY')}
-        </span>
-        <button
-          onClick={() => setStartMonth(m => m.add(1, 'month'))}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <ChevronRight size={16} className="text-gray-500" />
-        </button>
-      </div>
-
-      {/* Tabla */}
+      {/* Tabla deslizable */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
         <table className="text-xs border-collapse" style={{ minWidth: `${200 + columnas.length * 72}px` }}>
           <thead>
@@ -140,13 +124,15 @@ export default function TablaQuincenas() {
               >
                 Empleado
               </th>
-              {columnas.map((col, i) => (
+              {columnas.map((col) => (
                 col.esInicio ? (
                   <th
                     key={col.fecha}
                     colSpan={2}
                     className="text-center text-white font-semibold py-2 px-1 border-l border-white/20 uppercase tracking-wide"
-                    style={{ backgroundColor: AZUL }}
+                    style={{
+                      backgroundColor: col.mes.format('YYYY-MM') === hoy ? '#2563eb' : AZUL,
+                    }}
                   >
                     {col.mes.format('MMM YY')}
                   </th>
@@ -217,21 +203,22 @@ export default function TablaQuincenas() {
                           )
                         }
 
+                        const bgColor = pagada ? '#dcfce7' : parcial ? '#fef9c3' : '#fee2e2'
+                        const textColor = pagada ? '#166534' : parcial ? '#92400e' : '#991b1b'
+
                         return (
                           <td
                             key={col.fecha}
                             className="border border-gray-100 text-center py-1.5 px-1"
-                            style={{
-                              backgroundColor: pagada ? '#f0fdf4' : parcial ? '#fffbeb' : 'transparent',
-                            }}
+                            style={{ backgroundColor: bgColor }}
                           >
                             {pagada ? (
-                              <span className="flex items-center justify-center gap-0.5 text-green-600">
+                              <span className="flex items-center justify-center gap-0.5" style={{ color: textColor }}>
                                 <CheckCircle2 size={11} />
                                 <span className="text-[10px] font-medium">{formatDOP(monto).replace('RD$', '').trim()}</span>
                               </span>
                             ) : (
-                              <span className={parcial ? 'text-amber-600 font-medium' : 'text-gray-700'}>
+                              <span className="text-[10px] font-medium" style={{ color: textColor }}>
                                 {formatDOP(monto).replace('RD$', '').trim()}
                               </span>
                             )}
