@@ -256,7 +256,7 @@ export function pdfQuincena(cuotas, fechaCorte) {
   })
 
   // Grand total
-  const totalEsperado = cuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
+  const totalEsperado = cuotas.reduce((s, c) => s + Number(c.prestamos?.cuota_quincenal ?? c.monto_esperado), 0)
   const finalY = (doc.lastAutoTable?.finalY || 38) + 8
   doc.setFontSize(13)
   doc.setTextColor(...COLOR_AZUL)

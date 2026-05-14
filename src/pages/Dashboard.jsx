@@ -63,24 +63,26 @@ export default function Dashboard() {
 
       const totalProximaQuincena = allCuotas
         .filter(c => c.fecha_vencimiento === proxima && (c.estado === 'pendiente' || c.estado === 'parcial'))
-        .reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0)
+        .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) - Number(c.monto_pagado || 0), 0)
 
       const totalQuincenaAnterior = allCuotas
         .filter(c => c.fecha_vencimiento === anterior)
-        .reduce((s, c) => s + Number(c.monto_esperado), 0)
+        .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado), 0)
 
       // tasa promedio mensual de préstamos activos
       const tasaPromedio = activos.length
         ? activos.reduce((s, p) => s + Number(p.tasa_mensual), 0) / activos.length
         : 0
 
-      // ratio de interés por préstamo = tasa / (tasa + 1/meses)
+      // ratio de interés y cuota_quincenal por préstamo
       const ratioMap = {}
+      const cuotaQMap = {}
       ;(prestamos || []).forEach(p => {
         const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
         const tasa = Number(p.tasa_mensual)
         const denom = tasa + 1 / meses
         ratioMap[p.id] = denom > 0 ? tasa / denom : 0.5
+        cuotaQMap[p.id] = p.cuota_quincenal
       })
 
       // capital restante: capital original menos lo abonado a capital en cada préstamo activo
@@ -108,7 +110,7 @@ export default function Dashboard() {
             c.estado !== 'cancelada' &&
             activosIds.has(c.prestamo_id)
           )
-          .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0), 0)
+          .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
 
       const interésMesActual = calcInterésEsperado(inicioMesActual, finMesActual)
       const interésMesPasado = calcInterésEsperado(inicioMesPasado, finMesPasado)
@@ -121,7 +123,7 @@ export default function Dashboard() {
       // total capital + interés esperado = suma de todas las cuotas de préstamos activos
       const totalCapitalInteres = allCuotas
         .filter(c => activosIds.has(c.prestamo_id))
-        .reduce((s, c) => s + Number(c.monto_esperado), 0)
+        .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado), 0)
 
       setStats({
         capitalActivo,

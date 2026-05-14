@@ -68,9 +68,10 @@ export default function SeccionDetalle({ stats, nombre }) {
   const morosidad = totalCuotasPasadas > 0 ? (totalVencidas / totalCuotasPasadas) * 100 : 0
 
   // Capital cobrado (cuotas pagadas)
+  const cuotaQMap = Object.fromEntries(secPrestamos.map(p => [p.id, p.cuota_quincenal]))
   const capitalCobrado = secCuotas
     .filter(c => c.estado === 'pagada')
-    .reduce((s, c) => s + Number(c.monto_esperado), 0)
+    .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado), 0)
 
   // Préstamos por tasa → bar chart
   const tasaMap = {}

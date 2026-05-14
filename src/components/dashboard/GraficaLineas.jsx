@@ -9,14 +9,16 @@ import { formatDOP } from '@/lib/utils'
 const MESES = 12
 
 function buildRatioMap(prestamos) {
-  const m = {}
+  const ratio = {}
+  const cuotaQ = {}
   prestamos.forEach(p => {
     const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
     const tasa = Number(p.tasa_mensual)
     const denom = tasa + 1 / meses
-    m[p.id] = denom > 0 ? tasa / denom : 0.5
+    ratio[p.id] = denom > 0 ? tasa / denom : 0.5
+    cuotaQ[p.id] = p.cuota_quincenal
   })
-  return m
+  return { ratio, cuotaQ }
 }
 
 function CustomTooltip({ active, payload, label }) {
@@ -44,7 +46,7 @@ function CustomTooltip({ active, payload, label }) {
 export default function GraficaLineas({ prestamos, cuotas, pagos }) {
   const data = useMemo(() => {
     const hoy = dayjs()
-    const ratioMap = buildRatioMap(prestamos)
+    const { ratio: ratioMap, cuotaQ: cuotaQMap } = buildRatioMap(prestamos)
     const activos = prestamos.filter(p => p.estado === 'activo')
 
     return Array.from({ length: MESES }, (_, i) => {
@@ -81,7 +83,7 @@ export default function GraficaLineas({ prestamos, cuotas, pagos }) {
           c.estado !== 'cancelada' &&
           activosIds.has(c.prestamo_id)
         )
-        .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0), 0)
+        .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
 
       // Tasa de retorno = interés del mes / capital restante (%)
       const tasaRetorno = capitalRestante > 0 ? (interesEnMes / capitalRestante) * 100 : 0

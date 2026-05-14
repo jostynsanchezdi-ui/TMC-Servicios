@@ -21,7 +21,8 @@ function CustomTooltip({ active, payload }) {
 }
 
 export default function CuotasDetalle({ stats }) {
-  const { cuotas } = stats
+  const { cuotas, prestamos } = stats
+  const cuotaQMap = Object.fromEntries((prestamos || []).map(p => [p.id, p.cuota_quincenal]))
   const hoy = dayjs()
 
   const countByEstado = cuotas.reduce((acc, c) => {
@@ -33,8 +34,8 @@ export default function CuotasDetalle({ stats }) {
   const parciales = cuotas.filter(c => c.estado === 'parcial')
   const pendientes = cuotas.filter(c => c.estado === 'pendiente')
 
-  const montoVencido = vencidas.reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0)
-  const montoParcial = parciales.reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0)
+  const montoVencido = vencidas.reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) - Number(c.monto_pagado || 0), 0)
+  const montoParcial = parciales.reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) - Number(c.monto_pagado || 0), 0)
   const totalEnRiesgo = montoVencido + montoParcial
 
   // Próximas cuotas (pendientes, ordenadas por vencimiento)
@@ -153,7 +154,7 @@ export default function CuotasDetalle({ stats }) {
                   </p>
                 </div>
                 <span className="text-xs font-semibold text-gray-700 flex-shrink-0">
-                  {formatDOP(c.monto_esperado)}
+                  {formatDOP(cuotaQMap[c.prestamo_id] ?? c.monto_esperado)}
                 </span>
               </div>
             )

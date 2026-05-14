@@ -42,7 +42,7 @@ export default function CobradoDetalle({ stats }) {
   const prestamosMap = Object.fromEntries((prestamos || []).map(p => [p.id, p]))
 
   const totalCobrado = pagos.reduce((s, p) => s + Number(p.monto), 0)
-  const totalEsperado = cuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
+  const totalEsperado = cuotas.reduce((s, c) => s + Number(prestamosMap[c.prestamo_id]?.cuota_quincenal ?? c.monto_esperado), 0)
   const tasaRecuperacion = totalEsperado > 0 ? (totalCobrado / totalEsperado) * 100 : 0
 
   // Cobros por mes (últimos 8 meses) — split interest/capital
