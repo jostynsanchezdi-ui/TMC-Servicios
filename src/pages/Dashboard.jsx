@@ -53,6 +53,17 @@ export default function Dashboard() {
       const allCuotas = cuotas || []
       const allPagos = pagos || []
 
+      // ratio de interés y cuota_quincenal por préstamo
+      const ratioMap = {}
+      const cuotaQMap = {}
+      ;(prestamos || []).forEach(p => {
+        const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
+        const tasa = Number(p.tasa_mensual)
+        const denom = tasa + 1 / meses
+        ratioMap[p.id] = denom > 0 ? tasa / denom : 0.5
+        cuotaQMap[p.id] = p.cuota_quincenal
+      })
+
       // existing
       const capitalActivo = activos.reduce((s, p) => s + Number(p.monto_original), 0)
       const totalCobrado = allPagos.reduce((s, p) => s + Number(p.monto), 0)
@@ -73,17 +84,6 @@ export default function Dashboard() {
       const tasaPromedio = activos.length
         ? activos.reduce((s, p) => s + Number(p.tasa_mensual), 0) / activos.length
         : 0
-
-      // ratio de interés y cuota_quincenal por préstamo
-      const ratioMap = {}
-      const cuotaQMap = {}
-      ;(prestamos || []).forEach(p => {
-        const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
-        const tasa = Number(p.tasa_mensual)
-        const denom = tasa + 1 / meses
-        ratioMap[p.id] = denom > 0 ? tasa / denom : 0.5
-        cuotaQMap[p.id] = p.cuota_quincenal
-      })
 
       // capital restante: capital original menos lo abonado a capital en cada préstamo activo
       const capitalRestante = activos.reduce((s, p) => {
