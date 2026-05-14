@@ -2,7 +2,8 @@ import dayjs from 'dayjs'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { formatDOP } from '@/lib/utils'
 
-export default function AlertasPanel({ cuotas }) {
+export default function AlertasPanel({ cuotas, prestamos }) {
+  const cuotaQMap = Object.fromEntries((prestamos || []).map(p => [p.id, p.cuota_quincenal]))
   const hoy = dayjs()
 
   const vencidas = cuotas
@@ -63,7 +64,7 @@ export default function AlertasPanel({ cuotas }) {
             cuota.prestamos?.empleados
               ? `${cuota.prestamos.empleados.nombre} ${cuota.prestamos.empleados.apellido}`
               : `Cuota #${cuota.numero_cuota}`
-          const saldo = cuota.monto_esperado - (cuota.monto_pagado || 0)
+          const saldo = Number(cuotaQMap[cuota.prestamo_id] ?? cuota.monto_esperado) - Number(cuota.monto_pagado || 0)
           const esVencida = cuota.tipo === 'vencida'
 
           return (

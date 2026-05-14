@@ -35,14 +35,6 @@ export function diasParaVencer(fecha) {
   return dayjs(fecha).diff(dayjs(), 'day')
 }
 
-export function quincenaActual() {
-  const hoy = dayjs()
-  const dia = hoy.date()
-  if (dia <= 15) {
-    return hoy.date(15).format('YYYY-MM-DD')
-  }
-  return hoy.date(30).format('YYYY-MM-DD')
-}
 
 export function nombreCompleto(empleado) {
   if (!empleado) return ''

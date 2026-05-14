@@ -198,7 +198,7 @@ export default function Dashboard() {
           />
         </div>
         <div className="lg:col-span-1">
-          <AlertasPanel cuotas={stats.cuotas} />
+          <AlertasPanel cuotas={stats.cuotas} prestamos={stats.prestamos} />
         </div>
       </div>
 
