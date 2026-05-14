@@ -290,6 +290,7 @@ function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
     const isFullMonth = half === 0
     const activos = prestamos.filter(p => p.estado === 'activo')
 
+    let totalInteres = 0
     let totalCapital = 0
     let totalFlat = 0
 
@@ -312,15 +313,14 @@ function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
       const capitalRestante = Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
       const rate = isFullMonth ? tasa : tasa / 2
 
-      // Flat interest = what you actually earn regardless of capital state
       totalFlat += Number(p.monto_original) * rate
-      // Remaining capital for effective rate calculation
+      totalInteres += capitalRestante * rate
       totalCapital += capitalRestante
     })
 
-    // Effective rate = flat earnings / remaining capital
+    // Effective rate = flat earnings / remaining capital (always >= flat rate)
     const tasaEfectiva = totalCapital > 0 ? (totalFlat / totalCapital) * 100 : 0
-    return { interes: totalFlat, capitalTotal: totalCapital, tasaEfectiva, proyectado: esFuturo }
+    return { interes: totalInteres, capitalTotal: totalCapital, tasaEfectiva, proyectado: esFuturo }
   }, [month, half, prestamos, pagos, cuotas])
 
   return (
