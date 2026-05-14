@@ -96,17 +96,37 @@ export default function Reportes() {
                 <th className="text-left px-4 py-3">Sección</th>
                 <th className="text-right px-4 py-3">Capital Prestado</th>
                 <th className="text-right px-4 py-3">Intereses Est.</th>
+                <th className="text-right px-4 py-3">Capital Restante</th>
                 <th className="text-right px-4 py-3">Préstamos Activos</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(() => {
+                const pagosPorPrestamo = {}
+                pagos.forEach(pg => {
+                  if (!pagosPorPrestamo[pg.prestamo_id]) pagosPorPrestamo[pg.prestamo_id] = 0
+                  pagosPorPrestamo[pg.prestamo_id] += Number(pg.monto)
+                })
+                const cuotasPorPrestamo = {}
+                cuotas.forEach(c => {
+                  if (!cuotasPorPrestamo[c.prestamo_id]) cuotasPorPrestamo[c.prestamo_id] = 0
+                  cuotasPorPrestamo[c.prestamo_id]++
+                })
+
                 const map = {}
                 prestamos.filter((p) => p.estado === 'activo').forEach((p) => {
                   const sec = p.empleados?.secciones?.nombre || 'Sin sección'
-                  if (!map[sec]) map[sec] = { capital: 0, intereses: 0, count: 0 }
+                  if (!map[sec]) map[sec] = { capital: 0, intereses: 0, capitalRestante: 0, count: 0 }
                   map[sec].capital += Number(p.monto_original)
                   map[sec].intereses += Number(p.monto_original) * Number(p.tasa_mensual) * 12
+
+                  const meses = (cuotasPorPrestamo[p.id] || 24) / 2
+                  const tasa = Number(p.tasa_mensual)
+                  const denom = tasa + 1 / meses
+                  const ratio = denom > 0 ? tasa / denom : 0.5
+                  const capitalPagado = (pagosPorPrestamo[p.id] || 0) * (1 - ratio)
+                  map[sec].capitalRestante += Math.max(0, Number(p.monto_original) - capitalPagado)
+
                   map[sec].count++
                 })
                 return Object.entries(map).map(([sec, d]) => (
@@ -114,6 +134,7 @@ export default function Reportes() {
                     <td className="px-4 py-3 font-medium">{sec}</td>
                     <td className="px-4 py-3 text-right">{formatDOP(d.capital)}</td>
                     <td className="px-4 py-3 text-right text-green-600">{formatDOP(d.intereses)}</td>
+                    <td className="px-4 py-3 text-right text-amber-600 font-medium">{formatDOP(d.capitalRestante)}</td>
                     <td className="px-4 py-3 text-right">{d.count}</td>
                   </tr>
                 ))
