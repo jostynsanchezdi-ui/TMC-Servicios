@@ -283,13 +283,14 @@ function GananciaReducibleCard({ prestamos, pagos }) {
   const [month, setMonth] = useState(dq.month)
   const [half, setHalf] = useState(dq.half)
 
-  const { interes, capitalTotal, pct, proyectado } = useMemo(() => {
-    const { desde, hasta } = quincenaDates(month, half)
-    const esFuturo = dayjs(hasta).isAfter(dayjs(), 'day')
+  const { interes, capitalTotal, flat, proyectado } = useMemo(() => {
+    const { desde } = quincenaDates(month, half)
+    const esFuturo = dayjs(desde).isAfter(dayjs(), 'day')
     const activos = prestamos.filter(p => p.estado === 'activo')
 
     let totalInteres = 0
     let totalCapital = 0
+    let totalFlat = 0
 
     activos.forEach(p => {
       const tasa = Number(p.tasa_mensual)
@@ -304,11 +305,13 @@ function GananciaReducibleCard({ prestamos, pagos }) {
 
       totalInteres += capitalRestante * (tasa / 2)
       totalCapital += capitalRestante
+      totalFlat += Number(p.monto_original) * (tasa / 2)
     })
 
-    const pct = totalCapital > 0 ? (totalInteres / totalCapital) * 100 : 0
-    return { interes: totalInteres, capitalTotal: totalCapital, pct, proyectado: esFuturo }
+    return { interes: totalInteres, capitalTotal: totalCapital, flat: totalFlat, proyectado: esFuturo }
   }, [month, half, prestamos, pagos])
+
+  const diferencia = flat - interes
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
@@ -325,9 +328,10 @@ function GananciaReducibleCard({ prestamos, pagos }) {
       <div className="mt-2">
         <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Ganancia sobre Saldo</p>
         <p className="text-gray-900 text-xl font-bold mt-1 leading-none">{formatDOP(interes)}</p>
-        <p className="text-gray-400 text-xs mt-1">
-          {pct.toFixed(2)}% · {formatDOP(capitalTotal)} en calle · <span className="capitalize">{quincenaLabel(month, half)}</span>
-        </p>
+        <p className="text-gray-400 text-xs mt-1">{formatDOP(capitalTotal)} en calle · <span className="capitalize">{quincenaLabel(month, half)}</span></p>
+        {diferencia > 0.5 && (
+          <p className="text-sky-600 text-xs mt-0.5">{formatDOP(diferencia)} menos que flat</p>
+        )}
         <QuincenaSelector month={month} half={half} onChange={(m, h) => { setMonth(m); setHalf(h) }} showFullMonth />
       </div>
     </div>
