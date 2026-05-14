@@ -278,14 +278,16 @@ function GananciasNetasCard({ cuotas, prestamos }) {
 }
 
 // ── Ganancia Saldo Reducible Card ────────────────────────────
-function GananciaReducibleCard({ prestamos, pagos }) {
+function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
   const dq = defaultQuincena()
   const [month, setMonth] = useState(dq.month)
   const [half, setHalf] = useState(dq.half)
 
   const { interes, capitalTotal, flat, proyectado } = useMemo(() => {
     const { desde } = quincenaDates(month, half)
-    const esFuturo = dayjs(desde).isAfter(dayjs(), 'day')
+    const hoy = dayjs().format('YYYY-MM-DD')
+    const esFuturo = desde > hoy
+    const isFullMonth = half === 0
     const activos = prestamos.filter(p => p.estado === 'activo')
 
     let totalInteres = 0
@@ -301,15 +303,23 @@ function GananciaReducibleCard({ prestamos, pagos }) {
       const capitalPagado = pagos
         .filter(pg => pg.prestamo_id === p.id && (pg.fecha_pago || '') < desde)
         .reduce((s, pg) => s + Number(pg.monto) * (1 - ratio), 0)
-      const capitalRestante = Math.max(0, Number(p.monto_original) - capitalPagado)
 
-      totalInteres += capitalRestante * (tasa / 2)
+      const capitalProyectado = esFuturo
+        ? cuotas
+            .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento < desde && (c.estado === 'pendiente' || c.estado === 'parcial'))
+            .reduce((s, c) => s + Number(c.monto_esperado) * (1 - ratio), 0)
+        : 0
+
+      const capitalRestante = Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
+      const rate = isFullMonth ? tasa : tasa / 2
+
+      totalInteres += capitalRestante * rate
       totalCapital += capitalRestante
-      totalFlat += Number(p.monto_original) * (tasa / 2)
+      totalFlat += Number(p.monto_original) * rate
     })
 
     return { interes: totalInteres, capitalTotal: totalCapital, flat: totalFlat, proyectado: esFuturo }
-  }, [month, half, prestamos, pagos])
+  }, [month, half, prestamos, pagos, cuotas])
 
   const diferencia = flat - interes
 
@@ -377,7 +387,7 @@ export default function KPICards({ stats, onCardClick }) {
       <GananciasNetasCard cuotas={stats.cuotas} prestamos={stats.prestamos} />
 
       {/* 6 — Ganancia sobre saldo reducible */}
-      <GananciaReducibleCard prestamos={stats.prestamos} pagos={stats.pagos} />
+      <GananciaReducibleCard prestamos={stats.prestamos} pagos={stats.pagos} cuotas={stats.cuotas} />
 
       {/* 7 — Tasa promedio mensual + cuotas pendientes */}
       <TasaPromedioCard prestamos={stats.prestamos} cuotas={stats.cuotas} />
