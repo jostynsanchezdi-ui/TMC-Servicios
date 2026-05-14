@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, CalendarDays,
-  Building2, FileBarChart, X, TrendingUp
+  Building2, FileBarChart, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,6 @@ const nav = [
   { to: '/empleados', icon: Users, label: 'Empleados' },
   { to: '/prestamos', icon: CreditCard, label: 'Préstamos' },
   { to: '/quincena', icon: CalendarDays, label: 'Quincena' },
-  { to: '/ganancias', icon: TrendingUp, label: 'Ganancias' },
   { to: '/secciones', icon: Building2, label: 'Secciones' },
   { to: '/reportes', icon: FileBarChart, label: 'Reportes' },
 ]

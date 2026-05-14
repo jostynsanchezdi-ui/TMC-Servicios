@@ -12,7 +12,6 @@ import PrestamoDetalle from '@/pages/PrestamoDetalle'
 import Quincena from '@/pages/Quincena'
 import Secciones from '@/pages/Secciones'
 import Reportes from '@/pages/Reportes'
-import Ganancias from '@/pages/Ganancias'
 
 function PrivateRoute({ children }) {
   const { session, loading } = useAuth()
@@ -42,7 +41,6 @@ export default function App() {
             <Route path="quincena" element={<Quincena />} />
             <Route path="secciones" element={<Secciones />} />
             <Route path="reportes" element={<Reportes />} />
-            <Route path="ganancias" element={<Ganancias />} />
           </Route>
         </Routes>
       </AuthProvider>
