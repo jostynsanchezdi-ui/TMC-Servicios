@@ -222,7 +222,7 @@ export function pdfQuincena(cuotas, fechaCorte) {
       ])
     })
 
-    const secEsperado = secCuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
+    const secEsperado = secCuotas.reduce((s, c) => s + Number(c.prestamos?.cuota_quincenal ?? c.monto_esperado), 0)
     nonDataRows.add(body.length)
     body.push([
       { content: `Subtotal ${seccion}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [20, 83, 45] } },

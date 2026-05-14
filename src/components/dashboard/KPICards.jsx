@@ -177,11 +177,13 @@ function TasaRetornoCard({ prestamos, cuotas, pagos }) {
     const activosIds = new Set(activos.map(p => p.id))
 
     const ratioMap = {}
+    const cuotaQMap = {}
     activos.forEach(p => {
       const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
       const tasa = Number(p.tasa_mensual)
       const denom = tasa + 1 / meses
       ratioMap[p.id] = denom > 0 ? tasa / denom : 0.5
+      cuotaQMap[p.id] = p.cuota_quincenal
     })
 
     // Capital restante en la fecha seleccionada (con proyección si es futuro)
@@ -201,7 +203,7 @@ function TasaRetornoCard({ prestamos, cuotas, pagos }) {
     // Interés de la quincena seleccionada
     const interes = cuotas
       .filter(c => c.fecha_vencimiento >= desde && c.fecha_vencimiento <= hasta && c.estado !== 'cancelada' && activosIds.has(c.prestamo_id))
-      .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
+      .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
 
     const tasa = capital > 0 ? (interes / capital) * 100 : 0
     return { valor: tasa, interesQuincena: interes, capitalRestante: capital, proyectado: esFuturo }
@@ -235,15 +237,17 @@ function GananciasNetasCard({ cuotas, prestamos }) {
   const [month, setMonth] = useState(dq.month)
   const [half, setHalf] = useState(dq.half)
 
-  const ratioMap = useMemo(() => {
+  const { ratioMap, cuotaQMap } = useMemo(() => {
     const m = {}
+    const qMap = {}
     prestamos.forEach(p => {
       const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
       const tasa = Number(p.tasa_mensual)
       const denom = tasa + 1 / meses
       m[p.id] = denom > 0 ? tasa / denom : 0.5
+      qMap[p.id] = p.cuota_quincenal
     })
-    return m
+    return { ratioMap: m, cuotaQMap: qMap }
   }, [prestamos])
 
   const { ganancia, proyectado } = useMemo(() => {
@@ -251,9 +255,9 @@ function GananciasNetasCard({ cuotas, prestamos }) {
     const esFuturo = dayjs(hasta).isAfter(dayjs(), 'day')
     const total = cuotas
       .filter(c => c.fecha_vencimiento >= desde && c.fecha_vencimiento <= hasta && c.estado !== 'cancelada')
-      .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0), 0)
+      .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
     return { ganancia: total, proyectado: esFuturo }
-  }, [month, half, cuotas, ratioMap])
+  }, [month, half, cuotas, ratioMap, cuotaQMap])
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
