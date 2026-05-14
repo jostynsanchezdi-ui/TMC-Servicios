@@ -313,15 +313,16 @@ function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
       const capitalRestante = Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
       const rate = isFullMonth ? tasa : tasa / 2
 
-      totalInteres += capitalRestante * rate
-      totalCapital += capitalRestante
+      // Flat interest = what you actually earn regardless of capital state
       totalFlat += Number(p.monto_original) * rate
+      // Remaining capital for effective rate calculation
+      totalCapital += capitalRestante
     })
 
-    return { interes: totalInteres, capitalTotal: totalCapital, flat: totalFlat, proyectado: esFuturo }
+    // Effective rate = flat earnings / remaining capital
+    const tasaEfectiva = totalCapital > 0 ? (totalFlat / totalCapital) * 100 : 0
+    return { interes: totalFlat, capitalTotal: totalCapital, tasaEfectiva, proyectado: esFuturo }
   }, [month, half, prestamos, pagos, cuotas])
-
-  const diferencia = flat - interes
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
@@ -338,10 +339,10 @@ function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
       <div className="mt-2">
         <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Ganancia sobre Saldo</p>
         <p className="text-gray-900 text-xl font-bold mt-1 leading-none">{formatDOP(interes)}</p>
-        <p className="text-gray-400 text-xs mt-1">{formatDOP(capitalTotal)} en calle · <span className="capitalize">{quincenaLabel(month, half)}</span></p>
-        {diferencia > 0.5 && (
-          <p className="text-sky-600 text-xs mt-0.5">{formatDOP(diferencia)} menos que flat</p>
-        )}
+        <p className="text-gray-400 text-xs mt-1">
+          <span className="text-sky-600 font-semibold">{tasaEfectiva.toFixed(2)}%</span> efectivo · {formatDOP(capitalTotal)} en calle
+        </p>
+        <p className="text-gray-400 text-xs mt-0.5 capitalize">{quincenaLabel(month, half)}</p>
         <QuincenaSelector month={month} half={half} onChange={(m, h) => { setMonth(m); setHalf(h) }} showFullMonth />
       </div>
     </div>
