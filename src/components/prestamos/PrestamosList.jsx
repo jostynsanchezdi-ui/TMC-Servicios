@@ -283,9 +283,15 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                 const cuotas = cuotasMap[p.id] || []
                 const badge = ESTADO_BADGE[p.estado] || ESTADO_BADGE.cancelado
                 const pagadas = cuotas.filter(c => c.estado === 'pagada').length
-                const saldo = cuotas
-                  .filter(c => c.estado !== 'pagada' && c.estado !== 'cancelada')
-                  .reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0)
+                const mesesP = cuotas.length / 2 || 12
+                const tasaP = Number(p.tasa_mensual)
+                const denomP = tasaP + 1 / mesesP
+                const ratioP = denomP > 0 ? tasaP / denomP : 0.5
+                const capitalPagado = cuotas.reduce((s, c) => {
+                  const monto = c.estado === 'pagada' ? Number(c.monto_esperado) : Number(c.monto_pagado || 0)
+                  return s + monto * (1 - ratioP)
+                }, 0)
+                const saldo = Math.max(0, Number(p.monto_original) - capitalPagado)
 
                 return (
                   <tr
