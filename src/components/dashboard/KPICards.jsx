@@ -283,14 +283,13 @@ function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
   const [month, setMonth] = useState(dq.month)
   const [half, setHalf] = useState(dq.half)
 
-  const { interes, capitalTotal, flat, proyectado } = useMemo(() => {
+  const { interes, capitalTotal, tasaEfectiva, proyectado } = useMemo(() => {
     const { desde } = quincenaDates(month, half)
     const hoy = dayjs().format('YYYY-MM-DD')
     const esFuturo = desde > hoy
     const isFullMonth = half === 0
     const activos = prestamos.filter(p => p.estado === 'activo')
 
-    let totalInteres = 0
     let totalCapital = 0
     let totalFlat = 0
 
