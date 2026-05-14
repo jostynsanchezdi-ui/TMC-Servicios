@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { formatDOP, formatFecha } from '@/lib/utils'
 import {
   Banknote, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight,
-  CalendarCheck, CalendarClock, Percent, Layers, DollarSign, Activity
+  CalendarCheck, CalendarClock, Percent, Layers, DollarSign
 } from 'lucide-react'
 import QuincenaSelector, { quincenaDates, quincenaLabel, defaultQuincena } from '@/components/common/QuincenaSelector'
 
@@ -277,77 +277,6 @@ function GananciasNetasCard({ cuotas, prestamos }) {
   )
 }
 
-// ── Ganancia Saldo Reducible Card ────────────────────────────
-function GananciaReducibleCard({ prestamos, pagos, cuotas }) {
-  const dq = defaultQuincena()
-  const [month, setMonth] = useState(dq.month)
-  const [half, setHalf] = useState(dq.half)
-
-  const { interes, capitalTotal, tasaEfectiva, proyectado } = useMemo(() => {
-    const { desde } = quincenaDates(month, half)
-    const hoy = dayjs().format('YYYY-MM-DD')
-    const esFuturo = desde > hoy
-    const isFullMonth = half === 0
-    const activos = prestamos.filter(p => p.estado === 'activo')
-
-    let totalInteres = 0
-    let totalCapital = 0
-    let totalFlat = 0
-
-    activos.forEach(p => {
-      const tasa = Number(p.tasa_mensual)
-      const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
-      const denom = tasa + 1 / meses
-      const ratio = denom > 0 ? tasa / denom : 0.5
-
-      const capitalPagado = pagos
-        .filter(pg => pg.prestamo_id === p.id && (pg.fecha_pago || '') < desde)
-        .reduce((s, pg) => s + Number(pg.monto) * (1 - ratio), 0)
-
-      const capitalProyectado = esFuturo
-        ? cuotas
-            .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento < desde && (c.estado === 'pendiente' || c.estado === 'parcial'))
-            .reduce((s, c) => s + Number(c.monto_esperado) * (1 - ratio), 0)
-        : 0
-
-      const capitalRestante = Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
-      const rate = isFullMonth ? tasa : tasa / 2
-
-      totalFlat += Number(p.monto_original) * rate
-      totalInteres += capitalRestante * rate
-      totalCapital += capitalRestante
-    })
-
-    // Effective rate = flat earnings / remaining capital (always >= flat rate)
-    const tasaEfectiva = totalCapital > 0 ? (totalFlat / totalCapital) * 100 : 0
-    return { interes: totalInteres, capitalTotal: totalCapital, tasaEfectiva, proyectado: esFuturo }
-  }, [month, half, prestamos, pagos, cuotas])
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
-      <div className="flex items-start justify-between">
-        <div className="bg-sky-50 rounded-xl p-2.5">
-          <Activity size={16} className="text-sky-600" />
-        </div>
-        {proyectado && (
-          <span className="text-[9px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full self-start">
-            Proy.
-          </span>
-        )}
-      </div>
-      <div className="mt-2">
-        <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Ganancia sobre Saldo</p>
-        <p className="text-gray-900 text-xl font-bold mt-1 leading-none">{formatDOP(interes)}</p>
-        <p className="text-gray-400 text-xs mt-1">
-          <span className="text-sky-600 font-semibold">{tasaEfectiva.toFixed(2)}%</span> efectivo · {formatDOP(capitalTotal)} en calle
-        </p>
-        <p className="text-gray-400 text-xs mt-0.5 capitalize">{quincenaLabel(month, half)}</p>
-        <QuincenaSelector month={month} half={half} onChange={(m, h) => { setMonth(m); setHalf(h) }} showFullMonth />
-      </div>
-    </div>
-  )
-}
-
 // ── Main export ───────────────────────────────────────────────
 export default function KPICards({ stats, onCardClick }) {
   return (
@@ -386,10 +315,7 @@ export default function KPICards({ stats, onCardClick }) {
       {/* 5 — Ganancias netas */}
       <GananciasNetasCard cuotas={stats.cuotas} prestamos={stats.prestamos} />
 
-      {/* 6 — Ganancia sobre saldo reducible */}
-      <GananciaReducibleCard prestamos={stats.prestamos} pagos={stats.pagos} cuotas={stats.cuotas} />
-
-      {/* 7 — Tasa promedio mensual + cuotas pendientes */}
+      {/* 6 — Tasa promedio mensual + cuotas pendientes */}
       <TasaPromedioCard prestamos={stats.prestamos} cuotas={stats.cuotas} />
 
       {/* 8 — Total capital + interés esperado */}
