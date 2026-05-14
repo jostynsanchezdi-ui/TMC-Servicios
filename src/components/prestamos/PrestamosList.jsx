@@ -300,6 +300,9 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-900 truncate">{nombre}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            <span className="font-medium text-gray-600">{pagadas}/{cuotas.length}</span> pagos
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -314,6 +317,7 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                     {/* Monto */}
                     <td className="px-3 py-3 text-right">
                       <span className="font-semibold text-gray-900">{formatDOP(p.monto_original)}</span>
+                      <p className="text-xs text-amber-600 font-medium mt-0.5">{formatDOP(saldo)}</p>
                     </td>
 
                     {/* Saldo */}
