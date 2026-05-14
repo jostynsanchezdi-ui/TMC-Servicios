@@ -154,7 +154,7 @@ export default function Dashboard() {
 
   useEffect(() => { cargarStats() }, [cargarStats])
 
-  if (loading) {
+  if (loading || !stats) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-3">
