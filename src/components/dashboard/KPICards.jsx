@@ -87,7 +87,7 @@ function CapitalRestanteCard({ prestamos, pagos, cuotas }) {
       const capitalProyectado = esFuturo
         ? cuotas
           .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento <= hasta && (c.estado === 'pendiente' || c.estado === 'parcial'))
-          .reduce((ss, c) => ss + Number(c.monto_esperado) * (1 - ratio), 0)
+          .reduce((ss, c) => ss + Number(p.cuota_quincenal ?? c.monto_esperado) * (1 - ratio), 0)
         : 0
       return s + Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
     }, 0)
@@ -193,7 +193,7 @@ function TasaRetornoCard({ prestamos, cuotas, pagos }) {
       const capitalProyectado = esFuturo
         ? cuotas
           .filter(c => c.prestamo_id === p.id && c.fecha_vencimiento > hoy && c.fecha_vencimiento <= hasta && (c.estado === 'pendiente' || c.estado === 'parcial'))
-          .reduce((ss, c) => ss + Number(c.monto_esperado) * (1 - ratio), 0)
+          .reduce((ss, c) => ss + Number(p.cuota_quincenal ?? c.monto_esperado) * (1 - ratio), 0)
         : 0
       return s + Math.max(0, Number(p.monto_original) - capitalPagado - capitalProyectado)
     }, 0)
@@ -201,7 +201,7 @@ function TasaRetornoCard({ prestamos, cuotas, pagos }) {
     // Interés de la quincena seleccionada
     const interes = cuotas
       .filter(c => c.fecha_vencimiento >= desde && c.fecha_vencimiento <= hasta && c.estado !== 'cancelada' && activosIds.has(c.prestamo_id))
-      .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0), 0)
+      .reduce((s, c) => s + Number(c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
 
     const tasa = capital > 0 ? (interes / capital) * 100 : 0
     return { valor: tasa, interesQuincena: interes, capitalRestante: capital, proyectado: esFuturo }

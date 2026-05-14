@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import dayjs from 'dayjs'
 import { supabase } from '@/lib/supabase'
 import { pdfResumenGeneral } from '@/lib/pdf'
 import { formatDOP } from '@/lib/utils'
@@ -50,7 +51,10 @@ export default function Reportes() {
     const kpis = {
       capitalActivo: prestamos.filter((p) => p.estado === 'activo').reduce((s, p) => s + Number(p.monto_original), 0),
       totalCobrado: pagos.reduce((s, p) => s + Number(p.monto), 0),
-      interesesGenerados: prestamos.reduce((s, p) => s + Number(p.monto_original) * Number(p.tasa_mensual) * 12, 0),
+      interesesGenerados: prestamos.reduce((s, p) => {
+        const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
+        return s + Number(p.monto_original) * Number(p.tasa_mensual) * meses
+      }, 0),
       prestamosActivos: prestamos.filter((p) => p.estado === 'activo').length,
     }
     pdfResumenGeneral(kpis, prestamos, cuotas)

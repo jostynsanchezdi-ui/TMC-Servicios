@@ -205,7 +205,7 @@ export default function TablaQuincenas() {
                         const esExceso   = cuota.estado === 'pagada' && Number(cuota.monto_pagado) > monto + 0.01
                         const esPagada   = cuota.estado === 'pagada' && !esExceso
                         const esParcial  = cuota.estado === 'parcial'
-                        const esVencida  = (cuota.estado === 'pendiente' || cuota.estado === 'vencida') && col.fecha < hoyDate
+                        const esVencida  = cuota.estado === 'vencida' || (cuota.estado === 'pendiente' && col.fecha < hoyDate)
                         // pendiente futuro: sin color de alerta
 
                         const bgColor   = esExceso  ? '#ede9fe'

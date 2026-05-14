@@ -72,7 +72,7 @@ export default function RegistroPago({ cuota, onClose, onSuccess }) {
       await supabase.from('cuotas').update({
         monto_pagado: nuevoPagadoFinal,
         estado: nuevoEstado,
-        fecha_pago: esPagada ? hoy : null,
+        fecha_pago: hoy,
       }).eq('id', cuota.id)
 
       await supabase.from('pagos').insert({
