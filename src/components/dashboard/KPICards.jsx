@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { formatDOP, formatFecha } from '@/lib/utils'
 import {
   Banknote, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight,
-  CalendarCheck, CalendarClock, Percent, Layers
+  CalendarCheck, CalendarClock, Percent, Layers, DollarSign
 } from 'lucide-react'
 import QuincenaSelector, { quincenaDates, quincenaLabel, defaultQuincena } from '@/components/common/QuincenaSelector'
 
@@ -231,6 +231,55 @@ function TasaRetornoCard({ prestamos, cuotas, pagos }) {
   )
 }
 
+// ── Ganancias Netas Card ──────────────────────────────────────
+function GananciasNetasCard({ cuotas, prestamos }) {
+  const dq = defaultQuincena()
+  const [month, setMonth] = useState(dq.month)
+  const [half, setHalf] = useState(dq.half)
+
+  const { ratioMap, cuotaQMap } = useMemo(() => {
+    const m = {}
+    const qMap = {}
+    prestamos.forEach(p => {
+      const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
+      const tasa = Number(p.tasa_mensual)
+      const denom = tasa + 1 / meses
+      m[p.id] = denom > 0 ? tasa / denom : 0.5
+      qMap[p.id] = p.cuota_quincenal
+    })
+    return { ratioMap: m, cuotaQMap: qMap }
+  }, [prestamos])
+
+  const { ganancia, proyectado } = useMemo(() => {
+    const { desde, hasta } = quincenaDates(month, half)
+    const esFuturo = dayjs(hasta).isAfter(dayjs(), 'day')
+    const total = cuotas
+      .filter(c => c.fecha_vencimiento >= desde && c.fecha_vencimiento <= hasta && c.estado !== 'cancelada')
+      .reduce((s, c) => s + Number(cuotaQMap[c.prestamo_id] ?? c.monto_esperado) * (ratioMap[c.prestamo_id] ?? 0.5), 0)
+    return { ganancia: total, proyectado: esFuturo }
+  }, [month, half, cuotas, ratioMap, cuotaQMap])
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between min-h-[140px]">
+      <div className="flex items-start justify-between">
+        <div className="bg-emerald-50 rounded-xl p-2.5">
+          <DollarSign size={16} className="text-emerald-600" />
+        </div>
+        {proyectado && (
+          <span className="text-[9px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full self-start">
+            Proy.
+          </span>
+        )}
+      </div>
+      <div className="mt-2">
+        <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Ganancias Netas</p>
+        <p className="text-gray-900 text-xl font-bold mt-1 leading-none">{formatDOP(ganancia)}</p>
+        <p className="text-gray-400 text-xs mt-1 capitalize">{quincenaLabel(month, half)}</p>
+        <QuincenaSelector month={month} half={half} onChange={(m, h) => { setMonth(m); setHalf(h) }} showFullMonth />
+      </div>
+    </div>
+  )
+}
 
 // ── Main export ───────────────────────────────────────────────
 export default function KPICards({ stats, onCardClick }) {
@@ -267,7 +316,10 @@ export default function KPICards({ stats, onCardClick }) {
       {/* 4 — Capital restante */}
       <CapitalRestanteCard prestamos={stats.prestamos} pagos={stats.pagos} cuotas={stats.cuotas} />
 
-      {/* 5 — Tasa promedio mensual + cuotas pendientes */}
+      {/* 5 — Ganancias netas */}
+      <GananciasNetasCard cuotas={stats.cuotas} prestamos={stats.prestamos} />
+
+      {/* 6 — Tasa promedio mensual + cuotas pendientes */}
       <TasaPromedioCard prestamos={stats.prestamos} cuotas={stats.cuotas} />
 
       {/* 8 — Total capital + interés esperado */}
