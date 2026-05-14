@@ -35,8 +35,10 @@ const COLS = [
   { key: 'empleado',  label: 'Empleado',   sortFn: (a,b) => `${a.empleados?.apellido}`.localeCompare(`${b.empleados?.apellido}`) },
   { key: 'seccion',   label: 'Sección',    sortFn: (a,b) => (a.empleados?.secciones?.nombre||'').localeCompare(b.empleados?.secciones?.nombre||'') },
   { key: 'monto',     label: 'Monto',      sortFn: (a,b) => Number(a.monto_original) - Number(b.monto_original), align: 'right' },
+  { key: 'saldo',     label: 'Saldo',      sortFn: null, align: 'right' },
   { key: 'cuota',     label: 'Cuota Qnl.', sortFn: (a,b) => Number(a.cuota_quincenal) - Number(b.cuota_quincenal), align: 'right' },
   { key: 'tasa',      label: 'Tasa',       sortFn: (a,b) => Number(a.tasa_mensual) - Number(b.tasa_mensual), align: 'right' },
+  { key: 'pagos',     label: 'Pagos',      sortFn: null },
   { key: 'progreso',  label: 'Progreso',   sortFn: null },
   { key: 'fecha_fin', label: 'Vence',      sortFn: (a,b) => new Date(a.fecha_fin) - new Date(b.fecha_fin) },
   { key: 'estado',    label: 'Estado',     sortFn: (a,b) => (ESTADO_ORDER[a.estado] ?? 3) - (ESTADO_ORDER[b.estado] ?? 3) },
@@ -249,7 +251,9 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                       ${col.align === 'right' ? 'text-right' : 'text-left'}
                       ${col.sortFn ? 'cursor-pointer hover:text-gray-800 select-none' : ''}
                       ${col.key === 'seccion' ? 'hidden sm:table-cell' : ''}
+                      ${col.key === 'saldo' ? 'hidden md:table-cell' : ''}
                       ${col.key === 'cuota' || col.key === 'tasa' ? 'hidden md:table-cell' : ''}
+                      ${col.key === 'pagos' ? 'hidden lg:table-cell' : ''}
                       ${col.key === 'progreso' ? 'hidden lg:table-cell' : ''}
                       ${col.key === 'fecha_fin' ? 'hidden lg:table-cell' : ''}
                     `}
@@ -278,6 +282,10 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                 const av = avatarColor(nombre)
                 const cuotas = cuotasMap[p.id] || []
                 const badge = ESTADO_BADGE[p.estado] || ESTADO_BADGE.cancelado
+                const pagadas = cuotas.filter(c => c.estado === 'pagada').length
+                const saldo = cuotas
+                  .filter(c => c.estado !== 'pagada' && c.estado !== 'cancelada')
+                  .reduce((s, c) => s + Number(c.monto_esperado) - Number(c.monto_pagado || 0), 0)
 
                 return (
                   <tr
@@ -308,6 +316,11 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                       <span className="font-semibold text-gray-900">{formatDOP(p.monto_original)}</span>
                     </td>
 
+                    {/* Saldo */}
+                    <td className="px-3 py-3 text-right hidden md:table-cell">
+                      <span className="font-semibold text-amber-700">{formatDOP(saldo)}</span>
+                    </td>
+
                     {/* Cuota */}
                     <td className="px-3 py-3 text-right hidden md:table-cell text-gray-600">
                       {formatDOP(p.cuota_quincenal)}
@@ -317,6 +330,13 @@ export default function PrestamosList({ prestamos, cuotasMap, loading, onCambiar
                     <td className="px-3 py-3 text-right hidden md:table-cell">
                       <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
                         {(p.tasa_mensual * 100).toFixed(2)}%
+                      </span>
+                    </td>
+
+                    {/* Pagos */}
+                    <td className="px-3 py-3 text-center hidden lg:table-cell">
+                      <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                        {pagadas}/{cuotas.length}
                       </span>
                     </td>
 

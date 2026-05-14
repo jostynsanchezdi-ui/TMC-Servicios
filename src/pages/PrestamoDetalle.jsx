@@ -232,8 +232,16 @@ export default function PrestamoDetalle() {
   const tasa = Number(prestamo.tasa_mensual)
   const totalPagado = pagos.reduce((s, p) => s + Number(p.monto), 0)
   const balancePendiente = cuotas
-    .filter(c => c.estado !== 'pagada')
+    .filter(c => c.estado !== 'pagada' && c.estado !== 'cancelada')
     .reduce((s, c) => s + (Number(c.monto_esperado) - Number(c.monto_pagado || 0)), 0)
+
+  const { ratio } = (() => {
+    const denom = tasa + 1 / meses
+    return { ratio: denom > 0 ? tasa / denom : 0.5 }
+  })()
+  const saldoCapital = Math.max(0,
+    Number(prestamo.monto_original) - pagos.reduce((s, p) => s + Number(p.monto) * (1 - ratio), 0)
+  )
   const cuotasPagadas = cuotas.filter(c => c.estado === 'pagada').length
   const progresoPct = cuotas.length > 0 ? (cuotasPagadas / cuotas.length) * 100 : 0
   const totalEsperado = cuotas.reduce((s, c) => s + Number(c.monto_esperado), 0)
@@ -313,7 +321,7 @@ export default function PrestamoDetalle() {
       </div>
 
       {/* ── TOP KPI ROW ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard
           label="Capital original"
           value={formatDOP(prestamo.monto_original)}
@@ -331,7 +339,14 @@ export default function PrestamoDetalle() {
           progressColor="bg-blue-500"
         />
         <KPICard
-          label="Balance pendiente"
+          label="Saldo capital"
+          value={formatDOP(saldoCapital)}
+          sub="Capital aún por recuperar"
+          icon={CreditCard}
+          bg="bg-rose-50" iconColor="text-rose-600"
+        />
+        <KPICard
+          label="Saldo total"
           value={formatDOP(balancePendiente)}
           sub={`${cuotas.length - cuotasPagadas} cuotas restantes`}
           icon={Clock}
@@ -342,7 +357,7 @@ export default function PrestamoDetalle() {
         <KPICard
           label="Cuota quincenal"
           value={formatDOP(prestamo.cuota_quincenal)}
-          sub={`${(tasa * 100).toFixed(0)}% tasa mensual`}
+          sub={`${(tasa * 100).toFixed(2)}% mensual`}
           icon={TrendingUp}
           bg="bg-violet-50" iconColor="text-violet-600"
         />
