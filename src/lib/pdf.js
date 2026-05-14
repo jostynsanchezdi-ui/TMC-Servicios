@@ -217,7 +217,7 @@ export function pdfQuincena(cuotas, fechaCorte) {
       body.push([
         '',
         `${c.prestamos?.empleados?.nombre} ${c.prestamos?.empleados?.apellido || ''}`.trim(),
-        formatDOP(c.monto_esperado),
+        formatDOP(c.prestamos?.cuota_quincenal ?? c.monto_esperado),
         `#${c.numero_cuota}`,
       ])
     })

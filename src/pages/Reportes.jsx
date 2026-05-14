@@ -122,9 +122,8 @@ export default function Reportes() {
                   const sec = p.empleados?.secciones?.nombre || 'Sin sección'
                   if (!map[sec]) map[sec] = { capital: 0, intereses: 0, capitalRestante: 0, count: 0 }
                   map[sec].capital += Number(p.monto_original)
-                  map[sec].intereses += Number(p.monto_original) * Number(p.tasa_mensual) * 12
-
-                  const meses = (cuotasPorPrestamo[p.id] || 24) / 2
+                  const meses = dayjs(p.fecha_fin).diff(dayjs(p.fecha_inicio), 'month') || 12
+                  map[sec].intereses += Number(p.monto_original) * Number(p.tasa_mensual) * meses
                   const tasa = Number(p.tasa_mensual)
                   const denom = tasa + 1 / meses
                   const ratio = denom > 0 ? tasa / denom : 0.5
