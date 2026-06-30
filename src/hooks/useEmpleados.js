@@ -1,39 +1,57 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { enqueue } from '@/lib/offlineQueue'
 import { toast } from 'sonner'
 
 export function useEmpleados() {
   const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
 
-  async function fetchEmpleados() {
+  const fetchEmpleados = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('empleados')
       .select('*, secciones(id, nombre)')
       .order('apellido')
-    if (error) { toast.error('Error cargando empleados'); return }
+    if (error) { toast.error('Error cargando empleados'); setLoading(false); return }
     setEmpleados(data)
     setLoading(false)
-  }
+  }, [])
 
   function sanitizar(values) {
     return { ...values, seccion_id: values.seccion_id || null }
   }
 
   async function crearEmpleado(values) {
-    const { error } = await supabase.from('empleados').insert(sanitizar(values))
+    const data = sanitizar(values)
+    if (!navigator.onLine) {
+      enqueue('crear_empleado', data)
+      toast.info('Sin conexion — empleado guardado para sincronizar')
+      return
+    }
+    const { error } = await supabase.from('empleados').insert(data)
     if (error) throw error
     await fetchEmpleados()
   }
 
   async function actualizarEmpleado(id, values) {
-    const { error } = await supabase.from('empleados').update(sanitizar(values)).eq('id', id)
+    const data = sanitizar(values)
+    if (!navigator.onLine) {
+      enqueue('actualizar_empleado', { id, values: data })
+      toast.info('Sin conexion — cambios guardados para sincronizar')
+      return
+    }
+    const { error } = await supabase.from('empleados').update(data).eq('id', id)
     if (error) throw error
     await fetchEmpleados()
   }
 
   async function desactivarEmpleado(id) {
+    if (!navigator.onLine) {
+      enqueue('desactivar_empleado', { id })
+      toast.info('Sin conexion — desactivacion guardada para sincronizar')
+      return
+    }
     const { error: errEmp } = await supabase.from('empleados').update({ activo: false }).eq('id', id)
     if (errEmp) throw errEmp
 
@@ -48,7 +66,10 @@ export function useEmpleados() {
   }
 
   async function eliminarEmpleado(id) {
-    // Borrar en orden respetando las foreign keys
+    if (!navigator.onLine) {
+      toast.error('Se necesita conexion para eliminar un empleado')
+      return
+    }
     const { data: prestamos } = await supabase.from('prestamos').select('id').eq('empleado_id', id)
     const prestamoIds = (prestamos || []).map(p => p.id)
 
@@ -69,7 +90,11 @@ export function useEmpleados() {
     await fetchEmpleados()
   }
 
-  useEffect(() => { fetchEmpleados() }, [])
+  useEffect(() => {
+    fetchEmpleados()
+    window.addEventListener('tmc-sync-done', fetchEmpleados)
+    return () => window.removeEventListener('tmc-sync-done', fetchEmpleados)
+  }, [fetchEmpleados])
 
   return { empleados, loading, fetchEmpleados, crearEmpleado, actualizarEmpleado, desactivarEmpleado, eliminarEmpleado }
 }

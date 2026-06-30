@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { enqueue } from '@/lib/offlineQueue'
 import { formatDOP } from '@/lib/utils'
-import { X, Loader2, AlertCircle, CheckCircle2, Clock, TrendingUp, Zap } from 'lucide-react'
+import { X, Loader2, AlertCircle, CheckCircle2, Clock, TrendingUp, Zap, WifiOff } from 'lucide-react'
 
 const PUNTUALIDAD = [
   {
@@ -66,8 +67,28 @@ export default function RegistroPago({ cuota, onClose, onSuccess }) {
       const nuevoPagadoFinal = yaPagado + data.monto
       const esPagada = nuevoPagadoFinal >= esperado
       const nuevoEstado = esPagada ? 'pagada' : 'parcial'
-
       const hoy = new Date().toISOString().slice(0, 10)
+
+      if (!navigator.onLine) {
+        enqueue('registrar_pago', {
+          cuotaId: cuota.id,
+          montoPagadoFinal: nuevoPagadoFinal,
+          estado: nuevoEstado,
+          fechaPago: hoy,
+          pago: {
+            cuota_id: cuota.id,
+            prestamo_id: cuota.prestamo_id,
+            empleado_id: cuota.prestamos?.empleado_id,
+            monto: data.monto,
+            fecha_pago: hoy,
+            puntualidad,
+            notas: data.notas || null,
+          },
+        })
+        toast.info('Sin conexion — pago guardado para sincronizar', { icon: <WifiOff size={15} /> })
+        onSuccess()
+        return
+      }
 
       await supabase.from('cuotas').update({
         monto_pagado: nuevoPagadoFinal,
@@ -85,7 +106,7 @@ export default function RegistroPago({ cuota, onClose, onSuccess }) {
         notas: data.notas || null,
       })
 
-      const labels = { prematuro: 'Pago prematuro registrado', a_tiempo: 'Cuota pagada a tiempo ✓', tardio: 'Pago tardío registrado' }
+      const labels = { prematuro: 'Pago prematuro registrado', a_tiempo: 'Cuota pagada a tiempo ✓', tardio: 'Pago tardio registrado' }
       toast.success(esPagada ? labels[puntualidad] : 'Pago parcial registrado')
       onSuccess()
     } catch {
