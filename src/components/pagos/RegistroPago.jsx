@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { enqueue } from '@/lib/offlineQueue'
+import { logActividad } from '@/lib/actividades'
 import { formatDOP } from '@/lib/utils'
 import { X, Loader2, AlertCircle, CheckCircle2, Clock, TrendingUp, Zap, WifiOff } from 'lucide-react'
 
@@ -105,6 +106,13 @@ export default function RegistroPago({ cuota, onClose, onSuccess }) {
         puntualidad,
         notas: data.notas || null,
       })
+
+      const empNombre = [cuota.prestamos?.empleados?.nombre, cuota.prestamos?.empleados?.apellido].filter(Boolean).join(' ')
+      await logActividad(
+        'pago_registrado',
+        `Pago de ${formatDOP(data.monto)}${empNombre ? ` — ${empNombre}` : ''}, cuota #${cuota.numero_cuota}`,
+        { cuota_id: cuota.id, prestamo_id: cuota.prestamo_id, monto: data.monto }
+      )
 
       const labels = { prematuro: 'Pago prematuro registrado', a_tiempo: 'Cuota pagada a tiempo ✓', tardio: 'Pago tardio registrado' }
       toast.success(esPagada ? labels[puntualidad] : 'Pago parcial registrado')

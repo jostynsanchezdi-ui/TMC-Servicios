@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { enqueue } from '@/lib/offlineQueue'
+import { logActividad } from '@/lib/actividades'
 import { generarCuotas } from '@/lib/calculos'
+import { formatDOP } from '@/lib/utils'
 import { toast } from 'sonner'
 import dayjs from 'dayjs'
 
@@ -89,6 +91,15 @@ export function usePrestamos(empleadoId = null) {
       if (errPagos) throw errPagos
     }
 
+    const { data: emp } = await supabase
+      .from('empleados').select('nombre, apellido').eq('id', empleadoId).single()
+    const empNombre = emp ? `${emp.nombre} ${emp.apellido}` : ''
+    await logActividad(
+      'prestamo_nuevo',
+      `Nuevo préstamo de ${formatDOP(montoOriginal)}${empNombre ? ` — ${empNombre}` : ''} (${meses} meses)`,
+      { prestamo_id: prestamo.id, empleado_id: empleadoId }
+    )
+
     await fetchPrestamos()
     return prestamo
   }
@@ -101,6 +112,14 @@ export function usePrestamos(empleadoId = null) {
     }
     const { error } = await supabase.from('prestamos').update({ estado }).eq('id', id)
     if (error) throw error
+
+    const tipoLog = estado === 'cancelado' ? 'prestamo_cancelado'
+      : estado === 'completado' ? 'prestamo_completado'
+      : null
+    if (tipoLog) {
+      await logActividad(tipoLog, `Préstamo marcado como ${estado}`, { prestamo_id: id })
+    }
+
     await fetchPrestamos()
   }
 

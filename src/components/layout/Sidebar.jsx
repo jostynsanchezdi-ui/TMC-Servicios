@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, CalendarDays,
-  Building2, FileBarChart, X
+  Building2, FileBarChart, X, History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import ActivityLog from './ActivityLog'
+import ActivityPanel from './ActivityPanel'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -16,6 +17,8 @@ const nav = [
 ]
 
 export default function Sidebar({ open, onClose }) {
+  const [activityOpen, setActivityOpen] = useState(false)
+
   return (
     <>
       {/* Overlay móvil */}
@@ -62,9 +65,19 @@ export default function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Activity Log */}
-        <ActivityLog />
+        {/* Botón Actividad */}
+        <div className="px-3 pb-4 border-t border-gray-100 pt-3">
+          <button
+            onClick={() => setActivityOpen(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+          >
+            <History size={18} />
+            Actividad
+          </button>
+        </div>
       </aside>
+
+      {activityOpen && <ActivityPanel onClose={() => setActivityOpen(false)} />}
     </>
   )
 }

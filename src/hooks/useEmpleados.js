@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { enqueue } from '@/lib/offlineQueue'
+import { logActividad } from '@/lib/actividades'
 import { toast } from 'sonner'
 
 export function useEmpleados() {
@@ -31,6 +32,11 @@ export function useEmpleados() {
     }
     const { error } = await supabase.from('empleados').insert(data)
     if (error) throw error
+    await logActividad(
+      'empleado_nuevo',
+      `Nuevo empleado: ${values.nombre} ${values.apellido}`,
+      { nombre: values.nombre, apellido: values.apellido }
+    )
     await fetchEmpleados()
   }
 
@@ -43,6 +49,11 @@ export function useEmpleados() {
     }
     const { error } = await supabase.from('empleados').update(data).eq('id', id)
     if (error) throw error
+    await logActividad(
+      'empleado_actualizado',
+      `Empleado actualizado: ${values.nombre} ${values.apellido}`,
+      { empleado_id: id }
+    )
     await fetchEmpleados()
   }
 
@@ -52,6 +63,11 @@ export function useEmpleados() {
       toast.info('Sin conexion — desactivacion guardada para sincronizar')
       return
     }
+
+    const { data: emp } = await supabase
+      .from('empleados').select('nombre, apellido').eq('id', id).single()
+    const empNombre = emp ? `${emp.nombre} ${emp.apellido}` : ''
+
     const { error: errEmp } = await supabase.from('empleados').update({ activo: false }).eq('id', id)
     if (errEmp) throw errEmp
 
@@ -62,6 +78,11 @@ export function useEmpleados() {
       .eq('estado', 'activo')
     if (errPrestamos) throw errPrestamos
 
+    await logActividad(
+      'empleado_desactivado',
+      `Empleado desactivado: ${empNombre}`,
+      { empleado_id: id }
+    )
     await fetchEmpleados()
   }
 
@@ -70,6 +91,11 @@ export function useEmpleados() {
       toast.error('Se necesita conexion para eliminar un empleado')
       return
     }
+
+    const { data: emp } = await supabase
+      .from('empleados').select('nombre, apellido').eq('id', id).single()
+    const empNombre = emp ? `${emp.nombre} ${emp.apellido}` : ''
+
     const { data: prestamos } = await supabase.from('prestamos').select('id').eq('empleado_id', id)
     const prestamoIds = (prestamos || []).map(p => p.id)
 
@@ -87,6 +113,11 @@ export function useEmpleados() {
     const { error: errEmp } = await supabase.from('empleados').delete().eq('id', id)
     if (errEmp) throw errEmp
 
+    await logActividad(
+      'empleado_eliminado',
+      `Empleado eliminado: ${empNombre}`,
+      { empleado_id: id }
+    )
     await fetchEmpleados()
   }
 
