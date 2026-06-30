@@ -4,6 +4,7 @@ import {
   Building2, FileBarChart, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import ActivityLog from './ActivityLog'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -42,7 +43,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -60,6 +61,9 @@ export default function Sidebar({ open, onClose }) {
             </NavLink>
           ))}
         </nav>
+
+        {/* Activity Log */}
+        <ActivityLog />
       </aside>
     </>
   )
